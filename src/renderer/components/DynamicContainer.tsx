@@ -14,17 +14,13 @@ export function DynamicContainer(props: React.PropsWithChildren) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Watch for size changes
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    resizeObserver.observe(containerRef.current);
-
     // Also watch DOM changes
     const mutationObserver = new MutationObserver(updateDimensions);
     mutationObserver.observe(containerRef.current, {
       childList: true,
       subtree: true,
-      attributes: true,
-      characterData: true,
+      attributes: false,
+      characterData: false,
     });
 
     // Initial dimension update
@@ -32,7 +28,6 @@ export function DynamicContainer(props: React.PropsWithChildren) {
 
     // eslint-disable-next-line consistent-return
     return () => {
-      resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
   }, [updateDimensions]);

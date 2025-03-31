@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useSyncedStore } from '../../lib/store';
 
 export function APIKeyUpdate() {
-  const [apiKey, setApiKey] = useState('');
+  const { apiKey, setApiKey } = useSyncedStore();
   const [isEditing, setIsEditing] = useState(false);
-
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      const key = await window.electronAPI.getApiKey();
-      setApiKey(key);
-    };
-    fetchApiKey();
-  }, []);
 
   const trimmedApiKey = (key: string) => {
     if (key.length > 6) {

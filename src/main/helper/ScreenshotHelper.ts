@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
-import { AppState } from '../state';
+import stateManager from '../stateManager';
 
 const execFileAsync = promisify(execFile);
 
@@ -56,8 +56,6 @@ export class ScreenshotHelper {
   private readonly screenshotDir: string;
 
   private readonly extraScreenshotDir: string;
-
-  private appState: AppState = AppState.getInstance();
 
   private constructor() {
     // Initialize directories
@@ -119,7 +117,8 @@ export class ScreenshotHelper {
     hideMainWindow: () => void,
     showMainWindow: () => void,
   ): Promise<string> {
-    console.log('Taking screenshot in view:', this.appState.getView());
+    const { view } = stateManager.getState();
+    console.log('Taking screenshot in view:', view);
     hideMainWindow();
     await new Promise((resolve) => {
       setTimeout(resolve, 100);
@@ -134,7 +133,7 @@ export class ScreenshotHelper {
           : await captureScreenshotWindows();
 
       // Save and manage the screenshot based on current view
-      if (this.appState.getView() === 'queue') {
+      if (view === 'queue') {
         screenshotPath = path.join(this.screenshotDir, `${uuidv4()}.png`);
         await fs.promises.writeFile(screenshotPath, screenshotBuffer);
         console.log('Adding screenshot to main queue:', screenshotPath);
@@ -192,7 +191,8 @@ export class ScreenshotHelper {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       await fs.promises.unlink(screenshotFilePath);
-      if (this.appState.getView() === 'queue') {
+      const { view } = stateManager.getState();
+      if (view === 'queue') {
         this.screenshotQueue = this.screenshotQueue.filter(
           (filePath) => filePath !== screenshotFilePath,
         );

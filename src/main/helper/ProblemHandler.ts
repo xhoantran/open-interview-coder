@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { store } from '../store';
+import stateManager from '../stateManager';
 
 // Define interfaces for ProblemInfo and related structures
 interface DebugSolutionResponse {
@@ -40,8 +40,8 @@ interface ProblemInfo {
 export async function extractProblemInfo(
   imageDataList: string[],
 ): Promise<any> {
-  const storedApiKey = store.get('apiKey');
-  if (!storedApiKey) {
+  const { apiKey } = stateManager.getState();
+  if (!apiKey) {
     throw new Error('OpenAI API key not set');
   }
 
@@ -274,7 +274,7 @@ export async function extractProblemInfo(
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${storedApiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
       },
     );
@@ -308,8 +308,8 @@ export async function generateSolutionResponses(
   signal: AbortSignal,
 ): Promise<any> {
   try {
-    const storedApiKey = store.get('apiKey');
-    if (!storedApiKey) {
+    const { apiKey } = stateManager.getState();
+    if (!apiKey) {
       throw new Error('OpenAI API key not set');
     }
 
@@ -386,7 +386,7 @@ Format Requirements:
         signal,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${storedApiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
       },
     );
@@ -581,8 +581,8 @@ IMPORTANT FORMATTING NOTES:
 
   try {
     // Send the request to the OpenAI API
-    const storedApiKey = store.get('apiKey');
-    if (!storedApiKey) {
+    const { apiKey } = stateManager.getState();
+    if (!apiKey) {
       throw new Error('OpenAI API key not set');
     }
 
@@ -593,7 +593,7 @@ IMPORTANT FORMATTING NOTES:
         signal,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${storedApiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
       },
     );

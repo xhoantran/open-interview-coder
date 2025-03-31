@@ -1,39 +1,17 @@
-// Disable no-unused-vars, broken for spread args
-/* eslint no-unused-vars: off */
-import type { IpcRendererEvent } from 'electron';
 import { contextBridge, ipcRenderer, shell } from 'electron';
+import type { AppState } from '../types';
 import { PROCESSING_EVENTS } from './constant';
 
-const electronHandler = {
-  store: {
-    get(key: string) {
-      return ipcRenderer.sendSync('get-store', key);
-    },
-    set(property: string, val: any) {
-      ipcRenderer.send('set-store', property, val);
-    },
-    subscribe(key: string, func: (...args: any[]) => void) {
-      ipcRenderer.send('subscribe-store', key);
-      const subscription = (_event: IpcRendererEvent, ...args: any[]) =>
-        func(...args);
-      const channelName = `onChange:${key}`;
-      ipcRenderer.on(channelName, subscription);
-
-      return () => {
-        ipcRenderer.removeListener(channelName, subscription);
-      };
-    },
-    unsubscribe(key: string) {
-      ipcRenderer.send('unsubscribe-store', key);
-    },
-  },
-};
-
-contextBridge.exposeInMainWorld('electron', electronHandler);
-
-export type ElectronHandler = typeof electronHandler;
-
 const electronAPI = {
+  getState: () => ipcRenderer.invoke('state:get') as Promise<AppState>,
+  setState: (partialState: Partial<AppState>) =>
+    ipcRenderer.send('state:update', partialState),
+  onStateUpdate: (callback: (state: AppState) => void) => {
+    const listener = (_: any, newState: AppState) => callback(newState);
+    ipcRenderer.on('state:sync', listener);
+    return () => ipcRenderer.removeListener('state:sync', listener);
+  },
+
   updateContentDimensions: (dimensions: { width: number; height: number }) =>
     ipcRenderer.invoke('update-content-dimensions', dimensions),
   takeScreenshot: () => ipcRenderer.invoke('take-screenshot'),

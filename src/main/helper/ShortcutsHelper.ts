@@ -1,16 +1,14 @@
 import { app, globalShortcut } from 'electron';
 import { STEP } from '../constant';
-import { AppState } from '../state';
 import { ProcessingHelper } from './ProcessingHelper';
 import { getImagePreview, ScreenshotHelper } from './ScreenshotHelper';
 import { MainWindowHelper } from './MainWindowHelper';
+import stateManager from '../stateManager';
 
 export class ShortcutsHelper {
   private processingHelper: ProcessingHelper = ProcessingHelper.getInstance();
 
   private screenshotHelper: ScreenshotHelper = ScreenshotHelper.getInstance();
-
-  private appState: AppState = AppState.getInstance();
 
   private mainWindowHelper: MainWindowHelper = MainWindowHelper.getInstance();
 
@@ -67,7 +65,7 @@ export class ShortcutsHelper {
       console.log('Cleared queues.');
 
       // Update the view state to 'queue'
-      this.appState.setView('queue');
+      stateManager.setState({ view: 'queue' });
 
       // Notify renderer process to switch view to 'queue'
       const mainWindow = this.mainWindowHelper.getMainWindow();
@@ -105,6 +103,17 @@ export class ShortcutsHelper {
 
     globalShortcut.register('CommandOrControl+B', () => {
       this.mainWindowHelper.toggleMainWindow();
+    });
+
+    // Adjust opacity shortcuts
+    globalShortcut.register('CommandOrControl+[', () => {
+      console.log('Command/Ctrl + [ pressed. Decreasing opacity.');
+      this.mainWindowHelper.adjustOpacity(-10);
+    });
+
+    globalShortcut.register('CommandOrControl+]', () => {
+      console.log('Command/Ctrl + ] pressed. Increasing opacity.');
+      this.mainWindowHelper.adjustOpacity(10);
     });
 
     // Unregister shortcuts when quitting

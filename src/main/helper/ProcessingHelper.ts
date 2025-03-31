@@ -1,7 +1,6 @@
 import axios from 'axios';
 import fs from 'node:fs';
 import { PROCESSING_EVENTS } from '../constant';
-import { AppState } from '../state';
 import { getImagePreview, ScreenshotHelper } from './ScreenshotHelper';
 import { MainWindowHelper } from './MainWindowHelper';
 import {
@@ -9,10 +8,9 @@ import {
   extractProblemInfo,
   generateSolutionResponses,
 } from './ProblemHandler';
+import stateManager from '../stateManager';
 
 export class ProcessingHelper {
-  private appState: AppState = AppState.getInstance();
-
   private screenshotHelper: ScreenshotHelper = ScreenshotHelper.getInstance();
 
   private mainWindowHelper: MainWindowHelper = MainWindowHelper.getInstance();
@@ -40,7 +38,7 @@ export class ProcessingHelper {
     const mainWindow = this.mainWindowHelper.getMainWindow();
     if (!mainWindow) return;
 
-    const view = this.appState.getView();
+    const { view } = stateManager.getState();
 
     if (view === 'queue') {
       const screenshotQueue = this.screenshotHelper.getScreenshotQueue();
@@ -50,7 +48,7 @@ export class ProcessingHelper {
       }
 
       mainWindow.webContents.send(PROCESSING_EVENTS.INITIAL_START);
-      this.appState.setView('solutions');
+      stateManager.setState({ view: 'queue' });
 
       // Initialize AbortController
       this.currentProcessingAbortController = new AbortController();
@@ -132,7 +130,6 @@ export class ProcessingHelper {
         );
 
         if (result.success) {
-          this.appState.setHasDebugged(true);
           mainWindow.webContents.send(
             PROCESSING_EVENTS.DEBUG_SUCCESS,
             result.data,
@@ -178,7 +175,7 @@ export class ProcessingHelper {
         console.log('Problem info:', problemInfo);
 
         // Store problem info in AppState
-        this.appState.setProblemInfo(problemInfo);
+        stateManager.setState({ problemInfo });
 
         // Send first success event
         if (mainWindow) {
@@ -217,7 +214,7 @@ export class ProcessingHelper {
 
   private async generateSolutionsHelper(signal: AbortSignal) {
     try {
-      const problemInfo = this.appState.getProblemInfo();
+      const { problemInfo } = stateManager.getState();
       if (!problemInfo) {
         throw new Error('No problem info available');
       }
@@ -262,7 +259,7 @@ export class ProcessingHelper {
     try {
       const imageDataList = screenshots.map((screenshot) => screenshot.data);
 
-      const problemInfo = this.appState.getProblemInfo();
+      const { problemInfo } = stateManager.getState();
       if (!problemInfo) {
         throw new Error('No problem info available');
       }
@@ -320,9 +317,6 @@ export class ProcessingHelper {
 
       wasCancelled = true;
     }
-
-    // Reset hasDebugged flag
-    this.appState.setHasDebugged(false);
 
     const mainWindow = this.mainWindowHelper.getMainWindow();
     if (wasCancelled && mainWindow && !mainWindow.isDestroyed()) {

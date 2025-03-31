@@ -3,12 +3,10 @@ import { randomBytes } from 'crypto';
 import { getImagePreview, ScreenshotHelper } from './helper/ScreenshotHelper';
 import { ProcessingHelper } from './helper/ProcessingHelper';
 import { MainWindowHelper } from './helper/MainWindowHelper';
-import { AppState } from './state';
-import { store } from './store';
+import stateManager from './stateManager';
 
 const screenshotHelper = ScreenshotHelper.getInstance();
 const processingHelper = ProcessingHelper.getInstance();
-const appState = AppState.getInstance();
 const mainWindowHelper = MainWindowHelper.getInstance();
 
 export function initializeIpcHandlers(): void {
@@ -57,7 +55,7 @@ export function initializeIpcHandlers(): void {
   ipcMain.handle('get-screenshots', async () => {
     try {
       let previews = [];
-      const currentView = appState.getView();
+      const { view: currentView } = stateManager.getState();
 
       if (currentView === 'queue') {
         const queue = screenshotHelper.getScreenshotQueue();
@@ -172,7 +170,7 @@ export function initializeIpcHandlers(): void {
       screenshotHelper.clearQueues();
 
       // Reset view to queue
-      appState.setView('queue');
+      stateManager.setState({ view: 'queue' });
 
       // Get main window and send reset events
       const mainWindow = mainWindowHelper.getMainWindow();
@@ -187,10 +185,5 @@ export function initializeIpcHandlers(): void {
       console.error('Error triggering reset:', error);
       return { error: 'Failed to trigger reset' };
     }
-  });
-
-  ipcMain.handle('get-api-key', () => store.get('apiKey'));
-  ipcMain.handle('set-api-key', (event, apiKey: string) => {
-    store.set('apiKey', apiKey);
   });
 }

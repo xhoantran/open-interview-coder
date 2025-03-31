@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useToast } from '../contexts/toast';
 import Queue from './Queue';
 import Solutions from './Solutions';
+import { useSyncedStore } from '../lib/store';
 
 interface SubscribedAppProps {
   currentLanguage: string;
@@ -14,9 +15,10 @@ export function SubscribedApp({
   setLanguage,
 }: SubscribedAppProps) {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<'queue' | 'solutions' | 'debug'>('queue');
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { view, setView } = useSyncedStore();
   const { showToast } = useToast();
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Let's ensure we reset queries etc. if some electron signals happen
   useEffect(() => {
@@ -39,7 +41,7 @@ export function SubscribedApp({
     return () => {
       cleanup();
     };
-  }, [queryClient]);
+  }, [queryClient, setView]);
 
   // Listen for events that might switch views or show errors
   useEffect(() => {
@@ -87,7 +89,7 @@ export function SubscribedApp({
       }),
     ];
     return () => cleanupFunctions.forEach((fn) => fn());
-  }, [queryClient, showToast, view]);
+  }, [queryClient, setView, showToast, view]);
 
   if (view === 'queue') {
     return (

@@ -12,6 +12,7 @@ import { app } from 'electron';
 import { MainWindowHelper } from './helper/MainWindowHelper';
 import { ShortcutsHelper } from './helper/ShortcutsHelper';
 import { initializeIpcHandlers } from './ipcHandlers';
+import { initializeStateManager } from './stateManager';
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -37,6 +38,7 @@ app
     mainWindowHelper.createWindow();
     ShortcutsHelper.getInstance().registerGlobalShortcuts();
     initializeIpcHandlers();
+    initializeStateManager();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
