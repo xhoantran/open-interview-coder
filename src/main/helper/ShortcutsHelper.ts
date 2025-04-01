@@ -1,14 +1,12 @@
 import { app, globalShortcut } from 'electron';
 import { STEP } from '../constant';
-import { ProcessingHelper } from './ProcessingHelper';
-import { getImagePreview, ScreenshotHelper } from './ScreenshotHelper';
-import { MainWindowHelper } from './MainWindowHelper';
 import stateManager from '../stateManager';
+import { MainWindowHelper } from './MainWindowHelper';
+import { ProcessingHelper } from './ProcessingHelper';
+import { takeScreenshot } from './ScreenshotHelper';
 
 export class ShortcutsHelper {
   private processingHelper: ProcessingHelper = ProcessingHelper.getInstance();
-
-  private screenshotHelper: ScreenshotHelper = ScreenshotHelper.getInstance();
 
   private mainWindowHelper: MainWindowHelper = MainWindowHelper.getInstance();
 
@@ -32,15 +30,11 @@ export class ShortcutsHelper {
       if (mainWindow) {
         console.log('Taking screenshot...');
         try {
-          const screenshotPath = await this.screenshotHelper.takeScreenshot(
+          await takeScreenshot(
             () => this.mainWindowHelper.hideMainWindow(),
             () => this.mainWindowHelper.showMainWindow(),
+            stateManager.getState().view !== 'queue',
           );
-          const preview = await getImagePreview(screenshotPath);
-          mainWindow.webContents.send('screenshot-taken', {
-            path: screenshotPath,
-            preview,
-          });
         } catch (error) {
           console.error('Error capturing screenshot:', error);
         }
@@ -59,13 +53,14 @@ export class ShortcutsHelper {
       // Cancel ongoing API requests
       this.processingHelper?.cancelOngoingRequests();
 
-      // Clear both screenshot queues
-      this.screenshotHelper.clearQueues();
-
-      console.log('Cleared queues.');
-
       // Update the view state to 'queue'
-      stateManager.setState({ view: 'queue' });
+      stateManager.setState({
+        view: 'queue',
+        problemInfo: null,
+        solutionData: null,
+        screenshotQueue: [],
+        extraScreenshotQueue: [],
+      });
 
       // Notify renderer process to switch view to 'queue'
       const mainWindow = this.mainWindowHelper.getMainWindow();

@@ -1,6 +1,5 @@
-import { useRef, useState } from 'react';
-import { useToast } from '../../contexts/toast';
-import { Screenshot } from '../../types/screenshots';
+import { useState } from 'react';
+import { Screenshot } from '../../../types';
 import { APIKeyUpdate } from '../shared/APIKeyUpdate';
 import { LanguageSelector } from '../shared/LanguageSelector';
 
@@ -9,19 +8,13 @@ export interface SolutionCommandsProps {
   // eslint-disable-next-line react/no-unused-prop-types
   screenshots?: Screenshot[];
   extraScreenshots?: Screenshot[];
-  currentLanguage: string;
-  setLanguage: (language: string) => void;
 }
 
 function SolutionCommands({
   isProcessing,
   extraScreenshots = [],
-  currentLanguage,
-  setLanguage,
 }: SolutionCommandsProps) {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const { showToast } = useToast();
 
   const handleMouseEnter = () => {
     setIsTooltipVisible(true);
@@ -44,11 +37,9 @@ function SolutionCommands({
                 const result = await window.electronAPI.toggleMainWindow();
                 if (!result.success) {
                   console.error('Failed to toggle window:', result.error);
-                  showToast('Error', 'Failed to toggle window', 'error');
                 }
               } catch (error) {
                 console.error('Error toggling window:', error);
-                showToast('Error', 'Failed to toggle window', 'error');
               }
             }}
           >
@@ -74,11 +65,9 @@ function SolutionCommands({
                     const result = await window.electronAPI.triggerScreenshot();
                     if (!result.success) {
                       console.error('Failed to take screenshot:', result.error);
-                      showToast('Error', 'Failed to take screenshot', 'error');
                     }
                   } catch (error) {
                     console.error('Error taking screenshot:', error);
-                    showToast('Error', 'Failed to take screenshot', 'error');
                   }
                 }}
               >
@@ -110,19 +99,9 @@ function SolutionCommands({
                           'Failed to process screenshots:',
                           result.error,
                         );
-                        showToast(
-                          'Error',
-                          'Failed to process screenshots',
-                          'error',
-                        );
                       }
                     } catch (error) {
                       console.error('Error processing screenshots:', error);
-                      showToast(
-                        'Error',
-                        'Failed to process screenshots',
-                        'error',
-                      );
                     }
                   }}
                 >
@@ -149,11 +128,9 @@ function SolutionCommands({
                 const result = await window.electronAPI.triggerReset();
                 if (!result.success) {
                   console.error('Failed to reset:', result.error);
-                  showToast('Error', 'Failed to reset', 'error');
                 }
               } catch (error) {
                 console.error('Error resetting:', error);
-                showToast('Error', 'Failed to reset', 'error');
               }
             }}
           >
@@ -197,7 +174,6 @@ function SolutionCommands({
             {/* Tooltip Content */}
             {isTooltipVisible && (
               <div
-                ref={tooltipRef}
                 className="absolute top-full right-0 mt-2"
                 style={{ zIndex: 100 }}
               >
@@ -222,19 +198,9 @@ function SolutionCommands({
                                 'Failed to toggle window:',
                                 result.error,
                               );
-                              showToast(
-                                'Error',
-                                'Failed to toggle window',
-                                'error',
-                              );
                             }
                           } catch (error) {
                             console.error('Error toggling window:', error);
-                            showToast(
-                              'Error',
-                              'Failed to toggle window',
-                              'error',
-                            );
                           }
                         }}
                       >
@@ -269,21 +235,11 @@ function SolutionCommands({
                                     'Failed to take screenshot:',
                                     result.error,
                                   );
-                                  showToast(
-                                    'Error',
-                                    'Failed to take screenshot',
-                                    'error',
-                                  );
                                 }
                               } catch (error) {
                                 console.error(
                                   'Error taking screenshot:',
                                   error,
-                                );
-                                showToast(
-                                  'Error',
-                                  'Failed to take screenshot',
-                                  'error',
                                 );
                               }
                             }}
@@ -318,21 +274,11 @@ function SolutionCommands({
                                       'Failed to process screenshots:',
                                       result.error,
                                     );
-                                    showToast(
-                                      'Error',
-                                      'Failed to process screenshots',
-                                      'error',
-                                    );
                                   }
                                 } catch (error) {
                                   console.error(
                                     'Error processing screenshots:',
                                     error,
-                                  );
-                                  showToast(
-                                    'Error',
-                                    'Failed to process screenshots',
-                                    'error',
                                   );
                                 }
                               }}
@@ -367,11 +313,9 @@ function SolutionCommands({
                               await window.electronAPI.triggerReset();
                             if (!result.success) {
                               console.error('Failed to reset:', result.error);
-                              showToast('Error', 'Failed to reset', 'error');
                             }
                           } catch (error) {
                             console.error('Error resetting:', error);
-                            showToast('Error', 'Failed to reset', 'error');
                           }
                         }}
                       >
@@ -394,31 +338,8 @@ function SolutionCommands({
 
                     {/* Separator and Log Out */}
                     <div className="pt-3 mt-3 border-t border-white/10">
-                      <LanguageSelector
-                        currentLanguage={currentLanguage}
-                        setLanguage={setLanguage}
-                      />
-
+                      <LanguageSelector />
                       <APIKeyUpdate />
-
-                      {/* Credits Display */}
-                      {/* <div className="mb-3 px-2 space-y-1">
-                        <div className="flex items-center justify-between text-[13px] font-medium text-white/90">
-                          <span>Credits Remaining</span>
-                          <span>{credits} / 50</span>
-                        </div>
-                        <div className="text-[11px] text-white/50">
-                          Refill at{' '}
-                          <span
-                            className="underline cursor-pointer hover:opacity-80"
-                            onClick={() =>
-                              window.electronAPI.openSettingsPortal()
-                            }
-                          >
-                            www.interviewcoder.co/settings
-                          </span>
-                        </div>
-                      </div> */}
                     </div>
                   </div>
                 </div>

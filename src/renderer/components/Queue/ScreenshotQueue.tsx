@@ -1,17 +1,11 @@
+import { Screenshot } from '../../../types';
 import ScreenshotItem from './ScreenshotItem';
 
-interface Screenshot {
-  path: string;
-  preview: string;
-}
-
 interface ScreenshotQueueProps {
-  isLoading: boolean;
   screenshots: Screenshot[];
   onDeleteScreenshot: (index: number) => void;
 }
 function ScreenshotQueue({
-  isLoading,
   screenshots,
   onDeleteScreenshot,
 }: ScreenshotQueueProps) {
@@ -25,8 +19,7 @@ function ScreenshotQueue({
     <div className="flex gap-4">
       {displayScreenshots.map((screenshot, index) => (
         <ScreenshotItem
-          key={screenshot.path}
-          isLoading={isLoading}
+          key={screenshot.id}
           screenshot={screenshot}
           index={index}
           onDelete={onDeleteScreenshot}

@@ -1,36 +1,24 @@
-import React from 'react';
+import { ALLOWED_LANGUAGES } from '../../../constant';
+import { AllowedLanguageType } from '../../../types';
+import { useSyncedStore } from '../../lib/store';
 
-interface LanguageSelectorProps {
-  currentLanguage: string;
-  setLanguage: (language: string) => void;
-}
-
-export function LanguageSelector({
-  currentLanguage,
-  setLanguage,
-}: LanguageSelectorProps) {
-  const handleLanguageChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const newLanguage = e.target.value;
-    setLanguage(newLanguage);
-  };
+export function LanguageSelector() {
+  const { language, setLanguage } = useSyncedStore();
 
   return (
     <div className="mb-3 px-2 space-y-1">
       <div className="flex items-center justify-between text-[13px] font-medium text-white/90">
         <span>Language</span>
         <select
-          value={currentLanguage}
-          onChange={handleLanguageChange}
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as AllowedLanguageType)}
           className="bg-white/10 rounded px-2 py-1 text-sm outline-none border border-white/10 focus:border-white/20"
         >
-          <option value="python">Python</option>
-          <option value="javascript">JavaScript</option>
-          <option value="java">Java</option>
-          <option value="golang">Go</option>
-          <option value="cpp">C++</option>
-          <option value="kotlin">Kotlin</option>
+          {Object.keys(ALLOWED_LANGUAGES).map((lang) => (
+            <option key={lang} value={lang}>
+              {ALLOWED_LANGUAGES[lang as keyof typeof ALLOWED_LANGUAGES]}
+            </option>
+          ))}
         </select>
       </div>
     </div>

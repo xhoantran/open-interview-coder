@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 // @ts-expect-error CommonJS module
 import Store from 'electron-store';
+import { ALLOWED_LANGUAGES, VIEW } from '../constant';
 import type { AppState } from '../types';
 
 class StateManager {
@@ -11,13 +12,16 @@ class StateManager {
   constructor() {
     this.store = new Store<AppState>({
       defaults: {
+        screenshotQueue: [],
+        extraScreenshotQueue: [],
         problemInfo: null,
-        view: 'queue',
+        solutionData: null,
+        view: VIEW.QUEUE,
         apiKey: '',
         extractionModel: 'gpt-4o',
         solutionModel: 'gpt-4o',
         debuggingModel: 'gpt-4o',
-        language: 'python',
+        language: ALLOWED_LANGUAGES.PYTHON,
         opacity: 100,
       },
       encryptionKey: 'your-encryption-key', // Replace with your actual encryption key
@@ -52,7 +56,7 @@ export const initializeStateManager = () => {
 
   ipcMain.on('state:update', (event, partialState: Partial<AppState>) => {
     stateManager.setState(partialState);
-    event.sender.send('state:sync', stateManager.getState()); // Notify renderers
+    event.sender.send('state:sync', stateManager.getState());
   });
 };
 

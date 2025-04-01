@@ -1,18 +1,15 @@
 import { create } from 'zustand';
-import type {
-  AllowedLanguageType,
-  AllowedModelType,
-  AppState,
-  ViewType,
-} from '../../types';
+import type { AppState } from '../../types';
+import { ALLOWED_LANGUAGES, VIEW } from '../../constant';
 
 interface useSyncedStoreInterface extends AppState {
-  setView: (view: ViewType) => void;
+  setProblemInfo: (problemInfo: AppState['problemInfo']) => void;
+  setView: (view: AppState['view']) => void;
   setApiKey: (apiKey: string) => void;
-  setExtractionModel: (model: AllowedModelType) => void;
-  setSolutionModel: (model: AllowedModelType) => void;
-  setDebuggingModel: (model: AllowedModelType) => void;
-  setLanguage: (language: AllowedLanguageType) => void;
+  setExtractionModel: (model: AppState['extractionModel']) => void;
+  setSolutionModel: (model: AppState['solutionModel']) => void;
+  setDebuggingModel: (model: AppState['debuggingModel']) => void;
+  setLanguage: (language: AppState['language']) => void;
   setOpacity: (opacity: number) => void;
 }
 
@@ -30,7 +27,15 @@ export const useSyncedStore = create<useSyncedStoreInterface>((set) => {
   window.electronAPI.onStateUpdate(set);
 
   return {
-    view: 'queue',
+    screenshotQueue: [],
+    extraScreenshotQueue: [],
+    problemInfo: null,
+    solutionData: null,
+    setProblemInfo: (problemInfo) => {
+      set({ problemInfo });
+      window.electronAPI.setState({ problemInfo });
+    },
+    view: VIEW.QUEUE,
     setView: (view) => {
       set({ view });
       window.electronAPI.setState({ view });
@@ -55,7 +60,7 @@ export const useSyncedStore = create<useSyncedStoreInterface>((set) => {
       set({ debuggingModel: model });
       window.electronAPI.setState({ debuggingModel: model });
     },
-    language: 'python',
+    language: ALLOWED_LANGUAGES.PYTHON,
     setLanguage: (language) => {
       set({ language });
       window.electronAPI.setState({ language });

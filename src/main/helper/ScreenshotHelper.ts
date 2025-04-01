@@ -4,7 +4,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
+import { MAX_SCREENSHOTS } from '../../constant';
 import stateManager from '../stateManager';
+
+const userDataPath = app.getPath('userData');
+const screenshotDir = path.join(userDataPath, 'screenshots');
+
+if (!fs.existsSync(screenshotDir)) {
+  fs.mkdirSync(screenshotDir);
+}
+
+const extraScreenshotDir = path.join(userDataPath, 'extra_screenshots');
+
+if (!fs.existsSync(extraScreenshotDir)) {
+  fs.mkdirSync(extraScreenshotDir);
+}
 
 const execFileAsync = promisify(execFile);
 
@@ -46,180 +60,87 @@ export const getImagePreview = async (filepath: string): Promise<string> => {
   }
 };
 
-export class ScreenshotHelper {
-  private screenshotQueue: string[] = [];
+const addScreenshotToQueue = (buffer: Buffer, isExtra: boolean) => {
+  const screenshot = {
+    id: uuidv4(),
+    data: buffer.toString('base64'),
+    timestamp: Date.now(),
+  };
 
-  private extraScreenshotQueue: string[] = [];
+  const { screenshotQueue, extraScreenshotQueue } = stateManager.getState();
+  const targetingQueue = isExtra ? extraScreenshotQueue : screenshotQueue;
+  targetingQueue.push(screenshot);
 
-  private readonly MAX_SCREENSHOTS = 5;
-
-  private readonly screenshotDir: string;
-
-  private readonly extraScreenshotDir: string;
-
-  private constructor() {
-    // Initialize directories
-    this.screenshotDir = path.join(app.getPath('userData'), 'screenshots');
-    this.extraScreenshotDir = path.join(
-      app.getPath('userData'),
-      'extra_screenshots',
-    );
-
-    // Create directories if they don't exist
-    if (!fs.existsSync(this.screenshotDir)) {
-      fs.mkdirSync(this.screenshotDir);
-    }
-    if (!fs.existsSync(this.extraScreenshotDir)) {
-      fs.mkdirSync(this.extraScreenshotDir);
-    }
+  if (targetingQueue.length > MAX_SCREENSHOTS) {
+    targetingQueue.shift();
   }
 
-  // eslint-disable-next-line no-use-before-define
-  private static instance: ScreenshotHelper;
-
-  public static getInstance(): ScreenshotHelper {
-    if (!ScreenshotHelper.instance) {
-      ScreenshotHelper.instance = new ScreenshotHelper();
-    }
-    return ScreenshotHelper.instance;
+  if (isExtra) {
+    stateManager.setState({ extraScreenshotQueue: targetingQueue });
+  } else {
+    stateManager.setState({ screenshotQueue: targetingQueue });
   }
 
-  public getScreenshotQueue(): string[] {
-    return this.screenshotQueue;
-  }
+  return screenshot;
+};
 
-  public getExtraScreenshotQueue(): string[] {
-    return this.extraScreenshotQueue;
-  }
+export const takeScreenshot = async (
+  hideMainWindow: () => void,
+  showMainWindow: () => void,
+  isExtra: boolean,
+): Promise<void> => {
+  hideMainWindow();
+  await new Promise((resolve) => {
+    setTimeout(resolve, 100);
+  });
 
-  public clearQueues(): void {
-    // Clear screenshotQueue
-    this.screenshotQueue.forEach((screenshotPath) => {
-      fs.unlink(screenshotPath, (err) => {
-        console.error(`Error delete screenshot at ${screenshotPath}:`, err);
-      });
-    });
-    this.screenshotQueue = [];
+  try {
+    // Get screenshot buffer using native methods
+    const screenshotBuffer =
+      process.platform === 'darwin'
+        ? await captureScreenshotMac()
+        : await captureScreenshotWindows();
 
-    // Clear extraScreenshotQueue
-    this.extraScreenshotQueue.forEach((screenshotPath) => {
-      fs.unlink(screenshotPath, (err) => {
-        console.error(
-          `Error delete extra screenshot at ${screenshotPath}:`,
-          err,
-        );
-      });
-    });
-    this.extraScreenshotQueue = [];
-  }
-
-  public async takeScreenshot(
-    hideMainWindow: () => void,
-    showMainWindow: () => void,
-  ): Promise<string> {
-    const { view } = stateManager.getState();
-    console.log('Taking screenshot in view:', view);
-    hideMainWindow();
+    addScreenshotToQueue(screenshotBuffer, isExtra);
+  } catch (error) {
+    console.error('Screenshot error:', error);
+    throw error;
+  } finally {
     await new Promise((resolve) => {
-      setTimeout(resolve, 100);
+      setTimeout(resolve, 50);
     });
+    showMainWindow();
+  }
+};
 
-    let screenshotPath = '';
-    try {
-      // Get screenshot buffer using native methods
-      const screenshotBuffer =
-        process.platform === 'darwin'
-          ? await captureScreenshotMac()
-          : await captureScreenshotWindows();
-
-      // Save and manage the screenshot based on current view
-      if (view === 'queue') {
-        screenshotPath = path.join(this.screenshotDir, `${uuidv4()}.png`);
-        await fs.promises.writeFile(screenshotPath, screenshotBuffer);
-        console.log('Adding screenshot to main queue:', screenshotPath);
-        this.screenshotQueue.push(screenshotPath);
-        if (this.screenshotQueue.length > this.MAX_SCREENSHOTS) {
-          const removedPath = this.screenshotQueue.shift();
-          if (removedPath) {
-            try {
-              await fs.promises.unlink(removedPath);
-              console.log(
-                'Removed old screenshot from main queue:',
-                removedPath,
-              );
-            } catch (error) {
-              console.error('Error removing old screenshot:', error);
-            }
-          }
-        }
-      } else {
-        // In solutions view, only add to extra queue
-        screenshotPath = path.join(this.extraScreenshotDir, `${uuidv4()}.png`);
-        await fs.promises.writeFile(screenshotPath, screenshotBuffer);
-        console.log('Adding screenshot to extra queue:', screenshotPath);
-        this.extraScreenshotQueue.push(screenshotPath);
-        if (this.extraScreenshotQueue.length > this.MAX_SCREENSHOTS) {
-          const removedPath = this.extraScreenshotQueue.shift();
-          if (removedPath) {
-            try {
-              await fs.promises.unlink(removedPath);
-              console.log(
-                'Removed old screenshot from extra queue:',
-                removedPath,
-              );
-            } catch (error) {
-              console.error('Error removing old screenshot:', error);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Screenshot error:', error);
-      throw error;
-    } finally {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50);
+export const deleteScreenshot = async (
+  id: string,
+  isExtra: boolean,
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { screenshotQueue, extraScreenshotQueue } = stateManager.getState();
+    if (isExtra) {
+      stateManager.setState({
+        extraScreenshotQueue: extraScreenshotQueue.filter(
+          (screenshot) => screenshot.id !== id,
+        ),
       });
-      showMainWindow();
-    }
-
-    return screenshotPath;
-  }
-
-  public async deleteScreenshot(
-    screenshotFilePath: string,
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      await fs.promises.unlink(screenshotFilePath);
-      const { view } = stateManager.getState();
-      if (view === 'queue') {
-        this.screenshotQueue = this.screenshotQueue.filter(
-          (filePath) => filePath !== screenshotFilePath,
-        );
-      } else {
-        this.extraScreenshotQueue = this.extraScreenshotQueue.filter(
-          (filePath) => filePath !== screenshotFilePath,
-        );
-      }
-      return { success: true };
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      // @ts-expect-error
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
-
-  public clearExtraScreenshotQueue(): void {
-    // Clear extraScreenshotQueue
-    this.extraScreenshotQueue.forEach((screenshotPath) => {
-      fs.unlink(screenshotPath, (err) => {
-        if (err)
-          console.error(
-            `Error deleting extra screenshot at ${screenshotPath}:`,
-            err,
-          );
+    } else {
+      stateManager.setState({
+        screenshotQueue: screenshotQueue.filter(
+          (screenshot) => screenshot.id !== id,
+        ),
       });
-    });
-    this.extraScreenshotQueue = [];
+    }
+    console.log('Deleted screenshot:', id);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    // @ts-expect-error
+    return { success: false, error: error.message || 'Unknown error' };
   }
-}
+};
+
+export const clearExtraScreenshotQueue = () => {
+  stateManager.setState({ extraScreenshotQueue: [] });
+};

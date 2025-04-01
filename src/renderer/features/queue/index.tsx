@@ -1,6 +1,6 @@
-import QueueCommands from '../components/Queue/QueueCommands';
-import ScreenshotQueue from '../components/Queue/ScreenshotQueue';
-import { useSyncedStore } from '../lib/store';
+import QueueCommands from '../../components/Queue/QueueCommands';
+import ScreenshotQueue from '../../components/Queue/ScreenshotQueue';
+import { useSyncedStore } from '../../lib/store';
 
 function Queue() {
   const { screenshotQueue } = useSyncedStore();

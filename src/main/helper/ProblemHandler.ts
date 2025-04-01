@@ -1,45 +1,14 @@
 import axios, { AxiosError } from 'axios';
+import {
+  DebugSolutionSchema,
+  ProblemSchema,
+  SolutionSchema,
+} from '../../types/ProblemInfo';
 import stateManager from '../stateManager';
 
-// Define interfaces for ProblemInfo and related structures
-interface DebugSolutionResponse {
-  thoughts: string[];
-  old_code: string;
-  new_code: string;
-  time_complexity: string;
-  space_complexity: string;
-}
-
-interface ProblemInfo {
-  problem_statement?: string;
-  input_format?: {
-    description?: string;
-    parameters?: Array<{
-      name: string;
-      type: string;
-      subtype?: string;
-    }>;
-  };
-  output_format?: {
-    description?: string;
-    type?: string;
-    subtype?: string;
-  };
-  constraints?: Array<{
-    description: string;
-    parameter?: string;
-    range?: {
-      min?: number;
-      max?: number;
-    };
-  }>;
-  test_cases?: any; // Adjust the type as needed
-}
-
-// Define the extractProblemInfo function
 export async function extractProblemInfo(
   imageDataList: string[],
-): Promise<any> {
+): Promise<ProblemSchema> {
   const { apiKey } = stateManager.getState();
   if (!apiKey) {
     throw new Error('OpenAI API key not set');
@@ -304,9 +273,9 @@ export async function extractProblemInfo(
 }
 
 export async function generateSolutionResponses(
-  problemInfo: ProblemInfo,
+  problemInfo: ProblemSchema,
   signal: AbortSignal,
-): Promise<any> {
+): Promise<SolutionSchema> {
   try {
     const { apiKey } = stateManager.getState();
     if (!apiKey) {
@@ -411,9 +380,9 @@ Format Requirements:
 
 export async function debugSolutionResponses(
   imageDataList: string[],
-  problemInfo: ProblemInfo,
+  problemInfo: ProblemSchema,
   signal: AbortSignal,
-): Promise<DebugSolutionResponse> {
+): Promise<DebugSolutionSchema> {
   // Process images for inclusion in prompt
   const imageContents = imageDataList.map((imageData) => ({
     type: 'image_url',
@@ -603,7 +572,7 @@ IMPORTANT FORMATTING NOTES:
       response.data.choices[0].message.function_call.arguments;
 
     // Parse and return the response
-    return JSON.parse(functionCallArguments) as DebugSolutionResponse;
+    return JSON.parse(functionCallArguments) as DebugSolutionSchema;
   } catch (error: any) {
     if (error.response?.status === 404) {
       throw new Error(

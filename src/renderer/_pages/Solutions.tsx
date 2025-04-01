@@ -1,5 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
-import React, { useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
@@ -7,21 +5,17 @@ import ScreenshotQueue from '../components/Queue/ScreenshotQueue';
 import { ComplexitySection } from '../components/Solutions/ComplexitySection';
 import { ContentSection } from '../components/Solutions/ContentSection';
 import SolutionCommands from '../components/Solutions/SolutionCommands';
-import { useToast } from '../contexts/toast';
-import { ProblemStatementData } from '../types/solutions';
-import Debug from './Debug';
+import { useSyncedStore } from '../lib/store';
 
-function SolutionSection({
-  title,
-  content,
-  isLoading,
-  currentLanguage,
-}: {
+interface SolutionSectionProps {
   title: string;
-  content: React.ReactNode;
+  content: string;
   isLoading: boolean;
-  currentLanguage: string;
-}) {
+}
+
+function SolutionSection({ title, content, isLoading }: SolutionSectionProps) {
+  const { language } = useSyncedStore();
+
   return (
     <div className="space-y-2">
       <h2 className="text-[13px] font-medium text-white tracking-wide">
@@ -39,7 +33,7 @@ function SolutionSection({
         <div className="w-full">
           <SyntaxHighlighter
             showLineNumbers
-            language={currentLanguage === 'golang' ? 'go' : currentLanguage}
+            language={language === 'Go' ? 'go' : language}
             style={dracula}
             customStyle={{
               maxWidth: '100%',
@@ -51,7 +45,7 @@ function SolutionSection({
             }}
             wrapLongLines
           >
-            {content as string}
+            {content}
           </SyntaxHighlighter>
         </div>
       )}
@@ -59,289 +53,43 @@ function SolutionSection({
   );
 }
 
-export interface SolutionsProps {
-  setView: (view: 'queue' | 'solutions' | 'debug') => void;
-  currentLanguage: string;
-  setLanguage: (language: string) => void;
-}
-
-function Solutions({ setView, currentLanguage, setLanguage }: SolutionsProps) {
-  const queryClient = useQueryClient();
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const [debugProcessing, setDebugProcessing] = useState(false);
-  const [problemStatementData, setProblemStatementData] =
-    useState<ProblemStatementData | null>(null);
-  const [solutionData, setSolutionData] = useState<string | null>(null);
-  const [thoughtsData, setThoughtsData] = useState<string[] | null>(null);
-  const [timeComplexityData, setTimeComplexityData] = useState<string | null>(
-    null,
-  );
-  const [spaceComplexityData, setSpaceComplexityData] = useState<string | null>(
-    null,
-  );
-
-  const [isResetting, setIsResetting] = useState(false);
-
-  interface Screenshot {
-    id: string;
-    path: string;
-    preview: string;
-    timestamp: number;
-  }
-
-  const [extraScreenshots, setExtraScreenshots] = useState<Screenshot[]>([]);
-
-  useEffect(() => {
-    const fetchScreenshots = async () => {
-      try {
-        const existing = await window.electronAPI.getScreenshots();
-        console.log('Raw screenshot data:', existing);
-        const screenshots = (Array.isArray(existing) ? existing : []).map(
-          (p) => ({
-            id: p.path,
-            path: p.path,
-            preview: p.preview,
-            timestamp: Date.now(),
-          }),
-        );
-        console.log('Processed screenshots:', screenshots);
-        setExtraScreenshots(screenshots);
-      } catch (error) {
-        console.error('Error loading extra screenshots:', error);
-        setExtraScreenshots([]);
-      }
-    };
-
-    fetchScreenshots();
-  }, [solutionData]);
-
-  const { showToast } = useToast();
-
-  useEffect(() => {
-    // Set up event listeners
-    const cleanupFunctions = [
-      window.electronAPI.onScreenshotTaken(async () => {
-        try {
-          const existing = await window.electronAPI.getScreenshots();
-          const screenshots = (Array.isArray(existing) ? existing : []).map(
-            (p) => ({
-              id: p.path,
-              path: p.path,
-              preview: p.preview,
-              timestamp: Date.now(),
-            }),
-          );
-          setExtraScreenshots(screenshots);
-        } catch (error) {
-          console.error('Error loading extra screenshots:', error);
-        }
-      }),
-      window.electronAPI.onResetView(() => {
-        // Set resetting state first
-        setIsResetting(true);
-
-        // Remove queries
-        queryClient.removeQueries({
-          queryKey: ['solution'],
-        });
-        queryClient.removeQueries({
-          queryKey: ['new_solution'],
-        });
-
-        // Reset screenshots
-        setExtraScreenshots([]);
-
-        // After a small delay, clear the resetting state
-        setTimeout(() => {
-          setIsResetting(false);
-        }, 0);
-      }),
-      window.electronAPI.onSolutionStart(() => {
-        // Every time processing starts, reset relevant states
-        setSolutionData(null);
-        setThoughtsData(null);
-        setTimeComplexityData(null);
-        setSpaceComplexityData(null);
-      }),
-      window.electronAPI.onProblemExtracted((data) => {
-        queryClient.setQueryData(['problem_statement'], data);
-      }),
-      // if there was an error processing the initial solution
-      window.electronAPI.onSolutionError((error: string) => {
-        showToast('Processing Failed', error, 'error');
-        // Reset solutions in the cache (even though this shouldn't ever happen) and complexities to previous states
-        const solution = queryClient.getQueryData(['solution']) as {
-          code: string;
-          thoughts: string[];
-          time_complexity: string;
-          space_complexity: string;
-        } | null;
-        if (!solution) {
-          setView('queue');
-        }
-        setSolutionData(solution?.code || null);
-        setThoughtsData(solution?.thoughts || null);
-        setTimeComplexityData(solution?.time_complexity || null);
-        setSpaceComplexityData(solution?.space_complexity || null);
-        console.error('Processing error:', error);
-      }),
-      // when the initial solution is generated, we'll set the solution data to that
-      window.electronAPI.onSolutionSuccess((data) => {
-        if (!data) {
-          console.warn('Received empty or invalid solution data');
-          return;
-        }
-        console.log({ data });
-        const solutionDataTemp = {
-          code: data.code,
-          thoughts: data.thoughts,
-          time_complexity: data.time_complexity,
-          space_complexity: data.space_complexity,
-        };
-
-        queryClient.setQueryData(['solution'], solutionDataTemp);
-        setSolutionData(solutionDataTemp.code || null);
-        setThoughtsData(solutionDataTemp.thoughts || null);
-        setTimeComplexityData(solutionDataTemp.time_complexity || null);
-        setSpaceComplexityData(solutionDataTemp.space_complexity || null);
-
-        // Fetch latest screenshots when solution is successful
-        const fetchScreenshots = async () => {
-          try {
-            const existing = await window.electronAPI.getScreenshots();
-            const screenshots =
-              existing.previews?.map((p: { path: any; preview: any }) => ({
-                id: p.path,
-                path: p.path,
-                preview: p.preview,
-                timestamp: Date.now(),
-              })) || [];
-            setExtraScreenshots(screenshots);
-          } catch (error) {
-            console.error('Error loading extra screenshots:', error);
-            setExtraScreenshots([]);
-          }
-        };
-        fetchScreenshots();
-      }),
-
-      // ########################################################
-      // DEBUG EVENTS
-      // ########################################################
-      window.electronAPI.onDebugStart(() => {
-        // we'll set the debug processing state to true and use that to render a little loader
-        setDebugProcessing(true);
-      }),
-      // the first time debugging works, we'll set the view to debug and populate the cache with the data
-      window.electronAPI.onDebugSuccess((data) => {
-        queryClient.setQueryData(['new_solution'], data);
-        setDebugProcessing(false);
-      }),
-      // when there was an error in the initial debugging, we'll show a toast and stop the little generating pulsing thing.
-      window.electronAPI.onDebugError(() => {
-        showToast(
-          'Processing Failed',
-          'There was an error debugging your code.',
-          'error',
-        );
-        setDebugProcessing(false);
-      }),
-      window.electronAPI.onProcessingNoScreenshots(() => {
-        showToast(
-          'No Screenshots',
-          'There are no extra screenshots to process.',
-          'neutral',
-        );
-      }),
-    ];
-
-    return () => {
-      // resizeObserver.disconnect();
-      cleanupFunctions.forEach((cleanup) => cleanup());
-    };
-  }, [queryClient, setView, showToast]);
-
-  useEffect(() => {
-    setProblemStatementData(
-      queryClient.getQueryData(['problem_statement']) || null,
-    );
-    setSolutionData(queryClient.getQueryData(['solution']) || null);
-
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (event?.query.queryKey[0] === 'problem_statement') {
-        setProblemStatementData(
-          queryClient.getQueryData(['problem_statement']) || null,
-        );
-      }
-      if (event?.query.queryKey[0] === 'solution') {
-        const solution = queryClient.getQueryData(['solution']) as {
-          code: string;
-          thoughts: string[];
-          time_complexity: string;
-          space_complexity: string;
-        } | null;
-
-        setSolutionData(solution?.code ?? null);
-        setThoughtsData(solution?.thoughts ?? null);
-        setTimeComplexityData(solution?.time_complexity ?? null);
-        setSpaceComplexityData(solution?.space_complexity ?? null);
-      }
-    });
-    return () => unsubscribe();
-  }, [queryClient]);
+function Solutions() {
+  const { extraScreenshotQueue, problemInfo, solutionData } = useSyncedStore();
 
   const handleDeleteExtraScreenshot = async (index: number) => {
-    const screenshotToDelete = extraScreenshots[index];
+    const screenshotToDelete = extraScreenshotQueue[index];
 
     try {
       const response = await window.electronAPI.deleteScreenshot(
-        screenshotToDelete.path,
+        screenshotToDelete.id,
       );
 
-      if (response.success) {
-        // Fetch and update screenshots after successful deletion
-        const existing = await window.electronAPI.getScreenshots();
-        const screenshots = (Array.isArray(existing) ? existing : []).map(
-          (p) => ({
-            id: p.path,
-            path: p.path,
-            preview: p.preview,
-            timestamp: Date.now(),
-          }),
-        );
-        setExtraScreenshots(screenshots);
-      } else {
+      if (!response.success) {
         console.error('Failed to delete extra screenshot:', response.error);
-        showToast('Error', 'Failed to delete the screenshot', 'error');
       }
     } catch (error) {
       console.error('Error deleting extra screenshot:', error);
-      showToast('Error', 'Failed to delete the screenshot', 'error');
     }
   };
 
-  if (!isResetting && queryClient.getQueryData(['new_solution'])) {
-    return (
-      <Debug
-        isProcessing={debugProcessing}
-        setIsProcessing={setDebugProcessing}
-        currentLanguage={currentLanguage}
-        setLanguage={setLanguage}
-      />
-    );
-  }
+  // if (!isResetting && queryClient.getQueryData(['new_solution'])) {
+  //   return (
+  //     <Debug
+  //       isProcessing={debugProcessing}
+  //       setIsProcessing={setDebugProcessing}
+  //     />
+  //   );
+  // }
 
   return (
-    <div ref={contentRef} className="relative space-y-3 px-4 py-3">
+    <div className="relative space-y-3 px-4 py-3">
       {/* Conditionally render the screenshot queue if solutionData is available */}
       {solutionData && (
         <div className="bg-transparent w-fit">
           <div className="pb-3">
             <div className="space-y-3 w-fit">
               <ScreenshotQueue
-                isLoading={debugProcessing}
-                screenshots={extraScreenshots}
+                screenshots={extraScreenshotQueue}
                 onDeleteScreenshot={handleDeleteExtraScreenshot}
               />
             </div>
@@ -351,48 +99,29 @@ function Solutions({ setView, currentLanguage, setLanguage }: SolutionsProps) {
 
       {/* Navbar of commands with the SolutionsHelper */}
       <SolutionCommands
-        isProcessing={!problemStatementData || !solutionData}
-        extraScreenshots={extraScreenshots}
-        currentLanguage={currentLanguage}
-        setLanguage={setLanguage}
+        isProcessing={!problemInfo || !solutionData}
+        extraScreenshots={extraScreenshotQueue}
       />
 
       {/* Main Content - Modified width constraints */}
       <div className="w-full text-sm text-black bg-black/60 rounded-md">
         <div className="rounded-lg overflow-hidden">
           <div className="px-4 py-3 space-y-4 max-w-full">
-            {!solutionData && (
-              <>
-                <ContentSection
-                  title="Problem Statement"
-                  content={problemStatementData?.problem_statement}
-                  isLoading={!problemStatementData}
-                />
-                {problemStatementData && (
-                  <div className="mt-4 flex">
-                    <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-                      Generating solutions...
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+            <ContentSection
+              title="Problem Statement"
+              content={problemInfo?.problem_statement}
+              isLoading={!problemInfo}
+            />
 
-            {solutionData && (
+            {solutionData ? (
               <>
-                <ContentSection
-                  title="Problem Statement"
-                  content={problemStatementData?.problem_statement}
-                  isLoading={!problemStatementData}
-                />
-
                 <ContentSection
                   title="My Thoughts"
                   content={
-                    thoughtsData && (
+                    solutionData.thoughts && (
                       <div className="space-y-3">
                         <div className="space-y-1">
-                          {thoughtsData.map((thought) => (
+                          {solutionData.thoughts.map((thought) => (
                             <div
                               key={thought}
                               className="flex items-start gap-2"
@@ -405,22 +134,29 @@ function Solutions({ setView, currentLanguage, setLanguage }: SolutionsProps) {
                       </div>
                     )
                   }
-                  isLoading={!thoughtsData}
+                  isLoading={!solutionData}
                 />
 
                 <SolutionSection
                   title="Solution"
-                  content={solutionData}
+                  content={solutionData.code}
                   isLoading={!solutionData}
-                  currentLanguage={currentLanguage}
                 />
 
                 <ComplexitySection
-                  timeComplexity={timeComplexityData}
-                  spaceComplexity={spaceComplexityData}
-                  isLoading={!timeComplexityData || !spaceComplexityData}
+                  timeComplexity={solutionData.time_complexity}
+                  spaceComplexity={solutionData.space_complexity}
+                  isLoading={!solutionData}
                 />
               </>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="mt-4 flex">
+                  <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+                    Loading solutions...
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </div>

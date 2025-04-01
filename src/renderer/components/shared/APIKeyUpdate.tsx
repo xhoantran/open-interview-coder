@@ -41,10 +41,7 @@ export function APIKeyUpdate() {
           <button
             type="button"
             className="bg-emerald-600/80 hover:bg-emerald-500/90 text-white rounded px-2 py-1 text-sm"
-            onClick={() => {
-              window.electronAPI.setApiKey(apiKey);
-              setIsEditing(false);
-            }}
+            onClick={() => setIsEditing(false)}
           >
             Save
           </button>

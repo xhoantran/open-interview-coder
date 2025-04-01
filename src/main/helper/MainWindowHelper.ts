@@ -5,8 +5,8 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 
 import MenuBuilder from '../menu';
-import { resolveHtmlPath } from '../util';
 import stateManager from '../stateManager';
+import { resolveHtmlPath } from '../util';
 
 class AppUpdater {
   constructor() {
@@ -130,7 +130,7 @@ export class MainWindowHelper {
       visibleOnFullScreen: true,
     });
     this.mainWindow.setAlwaysOnTop(true, 'floating', 1);
-    this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    // this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
     // Additional screen capture resistance settings
     if (process.platform === 'darwin') {
@@ -148,6 +148,12 @@ export class MainWindowHelper {
     // Prevent the window from being captured by screen recording
     this.mainWindow.webContents.setBackgroundThrottling(false);
     this.mainWindow.webContents.setFrameRate(60);
+
+    stateManager.subscribe((state) => {
+      if (this.mainWindow) {
+        this.mainWindow.webContents.send('state:sync', state);
+      }
+    });
 
     // Remove this if your app does not use auto updates
     // eslint-disable-next-line
