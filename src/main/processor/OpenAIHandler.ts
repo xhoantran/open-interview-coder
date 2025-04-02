@@ -294,20 +294,20 @@ export async function generateSolutionResponses(
     const promptContent = `Given the following coding problem:
 
 Problem Statement:
-${problemInfo.problem_statement ?? 'Problem statement not available'}
+${problemInfo.problem_statement}
 
 Input Format:
-${problemInfo.input_format?.description ?? 'Input format not available'}
+${problemInfo.input_format.description ?? 'Input format not available'}
 Parameters:
 ${
-  problemInfo.input_format?.parameters
+  problemInfo.input_format.parameters
     ?.map((p) => `- ${p.name}: ${p.type}${p.subtype ? ` of ${p.subtype}` : ''}`)
     .join('\n') ?? 'No parameters available'
 }
 
 Output Format:
-${problemInfo.output_format?.description ?? 'Output format not available'}
-Returns: ${problemInfo.output_format?.type ?? 'Type not specified'}${
+${problemInfo.output_format.description ?? 'Output format not available'}
+Returns: ${problemInfo.output_format.type ?? 'Type not specified'}${
       problemInfo.output_format?.subtype
         ? ` of ${problemInfo.output_format.subtype}`
         : ''
