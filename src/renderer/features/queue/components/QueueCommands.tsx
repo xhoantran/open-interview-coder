@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import { APIKeyUpdate } from '../../../components/APIKeyUpdate';
 import { LanguageSelector } from '../../../components/LanguageSelector';
 import { ShortcutCommand } from '../../../components/ShortcutCommand';
 import { cn } from '../../../lib/utils';
@@ -203,8 +202,6 @@ function QueueCommands({ screenshotCount = 0 }: QueueCommandsProps) {
                     {/* Separator and Log Out */}
                     <div className="pt-3 mt-3 border-t border-white/10">
                       <LanguageSelector />
-
-                      <APIKeyUpdate />
                     </div>
                   </div>
                 </div>

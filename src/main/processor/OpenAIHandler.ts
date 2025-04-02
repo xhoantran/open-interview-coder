@@ -1,16 +1,35 @@
 import axios, { AxiosError } from 'axios';
-import {
-  DebugSolutionSchema,
-  ProblemSchema,
-  SolutionSchema,
-} from '../../types/ProblemInfo';
+import { OpenAIModel } from '../../types/models';
+import { ProblemSchema, SolutionSchema } from '../../types/ProblemInfo';
 import stateManager from '../stateManager';
 
+const openAiAxios = axios.create({
+  baseURL: 'https://api.openai.com/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+openAiAxios.interceptors.request.use(
+  (config) => {
+    const { openAIApiKey } = stateManager.getState();
+    if (openAIApiKey) {
+      config.headers.Authorization = `Bearer ${openAIApiKey}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
+
 export async function extractProblemInfo(
+  model: OpenAIModel,
   imageDataList: string[],
+  signal: AbortSignal,
 ): Promise<ProblemSchema> {
-  const { apiKey } = stateManager.getState();
-  if (!apiKey) {
+  const { openAIApiKey } = stateManager.getState();
+  if (!openAIApiKey) {
     throw new Error('OpenAI API key not set');
   }
 
@@ -228,7 +247,7 @@ export async function extractProblemInfo(
 
   // Prepare the request payload
   const payload = {
-    model: 'gpt-4o-mini',
+    model,
     messages,
     functions,
     function_call: { name: 'extract_problem_details' },
@@ -237,16 +256,9 @@ export async function extractProblemInfo(
 
   try {
     // Send the request to the completion endpoint
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-      },
-    );
+    const response = await openAiAxios.post('/chat/completions', payload, {
+      signal,
+    });
 
     // Extract the function call arguments from the response
     const functionCallArguments =
@@ -273,15 +285,11 @@ export async function extractProblemInfo(
 }
 
 export async function generateSolutionResponses(
+  model: OpenAIModel,
   problemInfo: ProblemSchema,
   signal: AbortSignal,
 ): Promise<SolutionSchema> {
   try {
-    const { apiKey } = stateManager.getState();
-    if (!apiKey) {
-      throw new Error('OpenAI API key not set');
-    }
-
     // Build the complete prompt with all problem information
     const promptContent = `Given the following coding problem:
 
@@ -340,25 +348,19 @@ Format Requirements:
 4. Response must be valid JSON
 5. Return only the JSON object with no markdown or other formatting`;
 
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'o1-mini',
-        messages: [
-          {
-            role: 'user',
-            content: promptContent,
-          },
-        ],
-      },
-      {
-        signal,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
+    const payload = {
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: promptContent,
         },
-      },
-    );
+      ],
+    };
+
+    const response = await openAiAxios.post('/chat/completions', payload, {
+      signal,
+    });
 
     const { content } = response.data.choices[0].message;
     return JSON.parse(content);
@@ -375,223 +377,5 @@ Format Requirements:
     }
     console.error('Error details:', error);
     throw new Error(`Error generating solutions: ${error.message}`);
-  }
-}
-
-export async function debugSolutionResponses(
-  imageDataList: string[],
-  problemInfo: ProblemSchema,
-  signal: AbortSignal,
-): Promise<DebugSolutionSchema> {
-  // Process images for inclusion in prompt
-  const imageContents = imageDataList.map((imageData) => ({
-    type: 'image_url',
-    image_url: {
-      url: `data:image/jpeg;base64,${imageData}`,
-    },
-  }));
-
-  // Build the prompt with error handling
-  const problemStatement =
-    problemInfo.problem_statement ?? 'Problem statement not available';
-
-  const inputFormatDescription =
-    problemInfo.input_format?.description ??
-    'Input format description not available';
-
-  const inputParameters = problemInfo.input_format?.parameters
-    ? problemInfo.input_format.parameters
-        .map(
-          (p) => `- ${p.name}: ${p.type}${p.subtype ? ` of ${p.subtype}` : ''}`,
-        )
-        .join(' ')
-    : 'Input parameters not available';
-
-  const outputFormatDescription =
-    problemInfo.output_format?.description ??
-    'Output format description not available';
-
-  const returns = problemInfo.output_format?.type
-    ? `Returns: ${problemInfo.output_format.type}${
-        problemInfo.output_format.subtype
-          ? ` of ${problemInfo.output_format.subtype}`
-          : ''
-      }`
-    : 'Returns: Output type not available';
-
-  const constraints = problemInfo.constraints
-    ? problemInfo.constraints
-        .map((c) => {
-          let constraintStr = `- ${c.description}`;
-          if (c.range) {
-            constraintStr += ` (${c.parameter}: ${c.range.min} to ${c.range.max})`;
-          }
-          return constraintStr;
-        })
-        .join(' ')
-    : 'Constraints not available';
-
-  let exampleTestCases = 'Test cases not available';
-  if (problemInfo.test_cases) {
-    try {
-      exampleTestCases = JSON.stringify(problemInfo.test_cases, null, 2);
-    } catch {
-      exampleTestCases = 'Test cases not available';
-    }
-  }
-
-  // Construct the debug prompt
-  const debugPrompt = `
-Given the following coding problem and its visual representation:
-
-Problem Statement:
-${problemStatement}
-
-Input Format:
-${inputFormatDescription}
-Parameters:
-${inputParameters}
-
-Output Format:
-${outputFormatDescription}
-${returns}
-
-Constraints:
-${constraints}
-
-Example Test Cases:
-${exampleTestCases}
-
-First extract and analyze the code shown in the image. Then create an improved version while maintaining the same general approach and structure. The old code you save should ONLY be the exact code that you see on the screen, regardless of any optimizations or changes you make. Make all your changes in the new_code field. You should use the image that has the most recent, longest version of the code, making sure to combine multiple images if necessary.
-Focus on keeping the solution syntactically similar but with optimizations and INLINE comments ONLY ON lines of code that were changed. Make sure there are no extra line breaks and all the code that is unchanged is in the same line as it was in the original code.
-
-IMPORTANT FORMATTING NOTES:
-1. Use actual line breaks (press enter for new lines) in both old_code and new_code
-2. Maintain proper indentation with spaces in both code blocks
-3. Add inline comments ONLY on changed lines in new_code
-4. The entire response must be valid JSON that can be parsed`;
-
-  // Construct the messages array
-  const messages = [
-    {
-      role: 'user',
-      content: [
-        {
-          type: 'text',
-          text: debugPrompt,
-        },
-        ...imageContents,
-      ],
-    },
-  ];
-
-  // Define the function schema
-  const functions = [
-    {
-      name: 'provide_solution',
-      description:
-        'Debug based on the problem and provide a solution to the coding problem',
-      parameters: {
-        type: 'object',
-        properties: {
-          thoughts: {
-            type: 'array',
-            items: { type: 'string' },
-            description:
-              "Share up to 3 key thoughts as you work through solving this problem for the first time. Write in the voice of someone actively reasoning through their approach, using natural pauses, uncertainty, and casual language that shows real-time problem solving. Each thought must be max 100 characters and be full sentences that don't sound choppy when read aloud.",
-            maxItems: 3,
-            thoughtGuidelines: [
-              "First thought should capture that initial moment of recognition - connecting it to something familiar or identifying the core challenge. Include verbal cues like 'hmm' or 'this reminds me of' that show active thinking.",
-              "Second thought must explore your emerging strategy and MUST explicitly name the algorithm or data structure being considered. Show both knowledge and uncertainty - like 'I could probably use a heap here, but I'm worried about...'",
-              "Third thought should show satisfaction at having a direction while acknowledging you still need to work out specifics - like 'Okay, I think I see how this could work...'",
-            ],
-          },
-          old_code: {
-            type: 'string',
-            description:
-              'The exact code implementation found in the image. There should be no additional lines of code added, this should only contain the code that is visible from the images, regardless of correctness or any fixes you can make. Include every line of code that are visible in the image.  You should use the image that has the most recent, longest version of the code, making sure to combine multiple images if necessary.',
-          },
-          new_code: {
-            type: 'string',
-            description:
-              'The improved code implementation with in-line comments only on lines of code that were changed',
-          },
-          time_complexity: {
-            type: 'string',
-            description:
-              "Time complexity with explanation, format as 'O(_) because _.' Importantly, if there were slight optimizations in the complexity that don't affect the overall complexity, MENTION THEM.",
-          },
-          space_complexity: {
-            type: 'string',
-            description:
-              "Space complexity with explanation, format as 'O(_) because _' Importantly, if there were slight optimizations in the complexity that don't affect the overall complexity, MENTION THEM.",
-          },
-        },
-        required: [
-          'thoughts',
-          'old_code',
-          'new_code',
-          'time_complexity',
-          'space_complexity',
-        ],
-      },
-    },
-  ];
-
-  // Prepare the payload for the API call
-  const payload = {
-    model: 'gpt-4o',
-    messages,
-    max_tokens: 4000,
-    temperature: 0,
-    functions,
-    function_call: { name: 'provide_solution' },
-  };
-
-  try {
-    // Send the request to the OpenAI API
-    const { apiKey } = stateManager.getState();
-    if (!apiKey) {
-      throw new Error('OpenAI API key not set');
-    }
-
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      payload,
-      {
-        signal,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-      },
-    );
-
-    // Extract the function call arguments from the response
-    const functionCallArguments =
-      response.data.choices[0].message.function_call.arguments;
-
-    // Parse and return the response
-    return JSON.parse(functionCallArguments) as DebugSolutionSchema;
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw new Error(
-        'API endpoint not found. Please check the model name and URL.',
-      );
-    } else if (error.response?.status === 401) {
-      throw new Error(
-        'Please close this window and re-enter a valid Open AI API key.',
-      );
-    } else if (error.response?.status === 429) {
-      throw new Error(
-        'API Key out of credits. Please refill your OpenAI API credits and try again.',
-      );
-    } else {
-      throw new Error(
-        `OpenAI API error: ${
-          error.response?.data?.error?.message || error.message
-        }`,
-      );
-    }
   }
 }

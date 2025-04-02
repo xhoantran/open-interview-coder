@@ -4,7 +4,6 @@ import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 
-import MenuBuilder from '../menu';
 import stateManager from '../stateManager';
 import { resolveHtmlPath } from '../util';
 
@@ -94,6 +93,7 @@ export class MainWindowHelper {
       titleBarStyle: 'hidden',
       enableLargerThanScreen: true,
       movable: true,
+      resizable: false,
       icon: getAssetPath('icon.png'),
     });
 
@@ -113,9 +113,6 @@ export class MainWindowHelper {
     this.mainWindow.on('closed', () => {
       this.mainWindow = null;
     });
-
-    const menuBuilder = new MenuBuilder(this.mainWindow);
-    menuBuilder.buildMenu();
 
     // Open urls in the user's browser
     this.mainWindow.webContents.setWindowOpenHandler((edata) => {

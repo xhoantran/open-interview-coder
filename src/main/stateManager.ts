@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 // @ts-expect-error CommonJS module
 import Store from 'electron-store';
-import { ALLOWED_LANGUAGES, VIEW } from '../constant';
+import { LANGUAGES, VIEW } from '../constant';
 import type { AppState } from '../types';
 
 class StateManager {
@@ -17,11 +17,13 @@ class StateManager {
         problemInfo: null,
         solutionData: null,
         view: VIEW.QUEUE,
-        apiKey: '',
+
+        // Settings
+        openAIApiKey: null,
+        geminiApiKey: null,
         extractionModel: 'gpt-4o',
         solutionModel: 'gpt-4o',
-        debuggingModel: 'gpt-4o',
-        language: ALLOWED_LANGUAGES.PYTHON,
+        language: LANGUAGES.PYTHON,
         opacity: 100,
       },
       encryptionKey: 'your-encryption-key', // Replace with your actual encryption key

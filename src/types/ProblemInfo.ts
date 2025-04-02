@@ -70,11 +70,3 @@ export interface SolutionSchema {
   time_complexity: string;
   space_complexity: string;
 }
-
-export interface DebugSolutionSchema {
-  thoughts: string[];
-  old_code: string;
-  new_code: string;
-  time_complexity: string;
-  space_complexity: string;
-}

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Screenshot } from '../../../../types';
-import { APIKeyUpdate } from '../../../components/APIKeyUpdate';
 import { LanguageSelector } from '../../../components/LanguageSelector';
 
 export interface SolutionCommandsProps {
@@ -339,7 +338,6 @@ function SolutionCommands({
                     {/* Separator and Log Out */}
                     <div className="pt-3 mt-3 border-t border-white/10">
                       <LanguageSelector />
-                      <APIKeyUpdate />
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
-import { ALLOWED_LANGUAGES } from '../../constant';
-import { AllowedLanguageType } from '../../types';
+import { LANGUAGES } from '../../constant';
+import { LanguageType } from '../../types';
 import { useSyncedStore } from '../lib/store';
 
 export function LanguageSelector() {
@@ -11,12 +11,12 @@ export function LanguageSelector() {
         <span>Language</span>
         <select
           value={language}
-          onChange={(e) => setLanguage(e.target.value as AllowedLanguageType)}
+          onChange={(e) => setLanguage(e.target.value as LanguageType)}
           className="bg-white/10 rounded px-2 py-1 text-sm outline-none border border-white/10 focus:border-white/20"
         >
-          {Object.keys(ALLOWED_LANGUAGES).map((lang) => (
+          {Object.keys(LANGUAGES).map((lang) => (
             <option key={lang} value={lang}>
-              {ALLOWED_LANGUAGES[lang as keyof typeof ALLOWED_LANGUAGES]}
+              {LANGUAGES[lang as keyof typeof LANGUAGES]}
             </option>
           ))}
         </select>

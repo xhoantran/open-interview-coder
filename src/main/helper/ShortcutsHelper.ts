@@ -1,9 +1,10 @@
 import { app, globalShortcut } from 'electron';
-import { STEP } from '../constant';
 import stateManager from '../stateManager';
 import { MainWindowHelper } from './MainWindowHelper';
 import { ProcessingHelper } from './ProcessingHelper';
 import { takeScreenshot } from './ScreenshotHelper';
+
+export const STEP = 50;
 
 export class ShortcutsHelper {
   private processingHelper: ProcessingHelper = ProcessingHelper.getInstance();
@@ -109,6 +110,13 @@ export class ShortcutsHelper {
     globalShortcut.register('CommandOrControl+]', () => {
       console.log('Command/Ctrl + ] pressed. Increasing opacity.');
       this.mainWindowHelper.adjustOpacity(10);
+    });
+
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+      console.log('Command/Ctrl + Shift + I pressed. Opening settings.');
+      stateManager.setState({
+        view: 'settings',
+      });
     });
 
     // Unregister shortcuts when quitting

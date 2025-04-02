@@ -1,12 +1,10 @@
-import { ALLOWED_LANGUAGES, ALLOWED_MODELS, VIEW } from '../constant';
+import { LANGUAGES, VIEW } from '../constant';
+import { ModelType } from './models';
 import { ProblemSchema, SolutionSchema } from './ProblemInfo';
 
 export type ViewType = (typeof VIEW)[keyof typeof VIEW];
 
-export type AllowedModelType = (typeof ALLOWED_MODELS)[number];
-
-export type AllowedLanguageType =
-  (typeof ALLOWED_LANGUAGES)[keyof typeof ALLOWED_LANGUAGES];
+export type LanguageType = (typeof LANGUAGES)[keyof typeof LANGUAGES];
 
 export interface Screenshot {
   id: string;
@@ -23,10 +21,10 @@ export interface AppState {
   extraScreenshotQueue: Screenshot[];
 
   // Settings
-  apiKey: string;
-  extractionModel: AllowedModelType;
-  solutionModel: AllowedModelType;
-  debuggingModel: AllowedModelType;
-  language: AllowedLanguageType;
+  openAIApiKey: string | null;
+  geminiApiKey: string | null;
+  extractionModel: ModelType;
+  solutionModel: ModelType;
+  language: LanguageType;
   opacity: number;
 }

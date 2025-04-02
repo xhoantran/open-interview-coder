@@ -1,14 +1,14 @@
 import { create } from 'zustand';
+import { LANGUAGES, VIEW } from '../../constant';
 import type { AppState } from '../../types';
-import { ALLOWED_LANGUAGES, VIEW } from '../../constant';
 
 interface useSyncedStoreInterface extends AppState {
   setProblemInfo: (problemInfo: AppState['problemInfo']) => void;
   setView: (view: AppState['view']) => void;
-  setApiKey: (apiKey: string) => void;
+  setOpenAIApiKey: (apiKey: AppState['openAIApiKey']) => void;
+  setGeminiApiKey: (apiKey: AppState['geminiApiKey']) => void;
   setExtractionModel: (model: AppState['extractionModel']) => void;
   setSolutionModel: (model: AppState['solutionModel']) => void;
-  setDebuggingModel: (model: AppState['debuggingModel']) => void;
   setLanguage: (language: AppState['language']) => void;
   setOpacity: (opacity: number) => void;
 }
@@ -20,7 +20,6 @@ export const useSyncedStore = create<useSyncedStoreInterface>((set) => {
     .then((state) => set(state))
     .catch((error) => {
       console.error('Failed to load initial state:', error);
-      set({ apiKey: '' }); // Fallback to default state
     });
 
   // Listen for updates from main process
@@ -40,10 +39,17 @@ export const useSyncedStore = create<useSyncedStoreInterface>((set) => {
       set({ view });
       window.electronAPI.setState({ view });
     },
-    apiKey: '',
-    setApiKey: (apiKey) => {
-      set({ apiKey });
-      window.electronAPI.setState({ apiKey });
+
+    // Settings
+    openAIApiKey: null,
+    setOpenAIApiKey: (apiKey) => {
+      set({ openAIApiKey: apiKey });
+      window.electronAPI.setState({ openAIApiKey: apiKey });
+    },
+    geminiApiKey: null,
+    setGeminiApiKey: (apiKey) => {
+      set({ geminiApiKey: apiKey });
+      window.electronAPI.setState({ geminiApiKey: apiKey });
     },
     extractionModel: 'gpt-4o',
     setExtractionModel: (model) => {
@@ -55,12 +61,7 @@ export const useSyncedStore = create<useSyncedStoreInterface>((set) => {
       set({ solutionModel: model });
       window.electronAPI.setState({ solutionModel: model });
     },
-    debuggingModel: 'gpt-4o',
-    setDebuggingModel: (model) => {
-      set({ debuggingModel: model });
-      window.electronAPI.setState({ debuggingModel: model });
-    },
-    language: ALLOWED_LANGUAGES.PYTHON,
+    language: LANGUAGES.PYTHON,
     setLanguage: (language) => {
       set({ language });
       window.electronAPI.setState({ language });
