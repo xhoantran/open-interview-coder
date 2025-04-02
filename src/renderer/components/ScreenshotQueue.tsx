@@ -1,4 +1,4 @@
-import { Screenshot } from '../../../types';
+import { Screenshot } from '../../types';
 import ScreenshotItem from './ScreenshotItem';
 
 interface ScreenshotQueueProps {

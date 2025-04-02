@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { Screenshot } from '../../../types';
+import { Screenshot } from '../../types';
 
 interface ScreenshotItemProps {
   screenshot: Screenshot;

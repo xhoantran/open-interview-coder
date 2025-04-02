@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
-import { cn } from '../../lib/utils';
-import { APIKeyUpdate } from '../shared/APIKeyUpdate';
-import { LanguageSelector } from '../shared/LanguageSelector';
-import { ShortcutCommand } from '../ShortcutCommand';
+import { APIKeyUpdate } from '../../../components/APIKeyUpdate';
+import { LanguageSelector } from '../../../components/LanguageSelector';
+import { ShortcutCommand } from '../../../components/ShortcutCommand';
+import { cn } from '../../../lib/utils';
 
 interface QueueCommandsProps {
   screenshotCount?: number;

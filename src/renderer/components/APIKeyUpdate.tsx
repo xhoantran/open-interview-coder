@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSyncedStore } from '../../lib/store';
+import { useSyncedStore } from '../lib/store';
 
 export function APIKeyUpdate() {
   const { apiKey, setApiKey } = useSyncedStore();

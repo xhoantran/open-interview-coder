@@ -1,6 +1,6 @@
-import { ALLOWED_LANGUAGES } from '../../../constant';
-import { AllowedLanguageType } from '../../../types';
-import { useSyncedStore } from '../../lib/store';
+import { ALLOWED_LANGUAGES } from '../../constant';
+import { AllowedLanguageType } from '../../types';
+import { useSyncedStore } from '../lib/store';
 
 export function LanguageSelector() {
   const { language, setLanguage } = useSyncedStore();

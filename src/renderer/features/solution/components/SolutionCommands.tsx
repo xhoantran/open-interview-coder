@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Screenshot } from '../../../types';
-import { APIKeyUpdate } from '../shared/APIKeyUpdate';
-import { LanguageSelector } from '../shared/LanguageSelector';
+import { Screenshot } from '../../../../types';
+import { APIKeyUpdate } from '../../../components/APIKeyUpdate';
+import { LanguageSelector } from '../../../components/LanguageSelector';
 
 export interface SolutionCommandsProps {
   isProcessing: boolean;
