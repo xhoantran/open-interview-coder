@@ -1,8 +1,8 @@
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GEMINI_MODELS, LANGUAGES, OPEN_AI_MODELS } from '../../../constant';
 import { LanguageType } from '../../../types';
-import { ModelType } from '../../../types/models';
+import { isOpenAIModel, ModelType } from '../../../types/models';
 import { useSyncedStore } from '../../lib/store';
 import { Button } from './components/Button';
 
@@ -32,13 +32,36 @@ export function Settings() {
   const [geminiKeyHolder, setGeminiKeyHolder] = useState('');
   const [isEditingGeminiApiKey, setIsEditingGeminiApiKey] = useState(false);
 
-  const VALID_MODELS = [];
+  const VALID_MODELS: ModelType[] = [];
   if (openAIApiKey) {
     VALID_MODELS.push(...Object.values(OPEN_AI_MODELS));
   }
   if (geminiApiKey) {
     VALID_MODELS.push(...Object.values(GEMINI_MODELS));
   }
+
+  useEffect(() => {
+    if (!openAIApiKey) {
+      if (isOpenAIModel(solutionModel)) {
+        setSolutionModel(VALID_MODELS[0]);
+      }
+
+      if (isOpenAIModel(extractionModel)) {
+        setExtractionModel(VALID_MODELS[0]);
+      }
+    }
+
+    if (!geminiApiKey) {
+      if (!isOpenAIModel(solutionModel)) {
+        setSolutionModel(VALID_MODELS[0]);
+      }
+
+      if (!isOpenAIModel(extractionModel)) {
+        setExtractionModel(VALID_MODELS[0]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAIApiKey, geminiApiKey, VALID_MODELS]);
 
   return (
     <div className="max-w-3xl bg-gray-900/80 py-10">
