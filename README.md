@@ -41,6 +41,7 @@ The application uses unidentifiable global keyboard shortcuts that won't be dete
 - Process Screenshots: [Control or Cmd + Enter]
 - Reset View: [Control or Cmd + R]
 - Quit: [Control or Cmd + Q]
+- Toggle Settings: [Shift + Control or Cmd + I]
 
 ## Usage
 

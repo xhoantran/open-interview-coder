@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios';
+import OpenAI from 'openai';
 import { OpenAIModel } from '../../types/models';
 import { ProblemSchema, SolutionSchema } from '../../types/ProblemInfo';
 import stateManager from '../stateManager';

@@ -114,8 +114,9 @@ export class ShortcutsHelper {
 
     globalShortcut.register('CommandOrControl+Shift+I', () => {
       console.log('Command/Ctrl + Shift + I pressed. Opening settings.');
+      const { view } = stateManager.getState();
       stateManager.setState({
-        view: 'settings',
+        view: view === 'settings' ? 'queue' : 'settings',
       });
     });
 

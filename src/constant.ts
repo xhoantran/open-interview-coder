@@ -12,12 +12,8 @@ export const OPEN_AI_MODELS = {
 export const GEMINI_MODELS = {
   GEMINI_1_5_PRO: 'gemini-1.5-pro',
   GEMINI_2_0_FLASH: 'gemini-2.0-flash',
+  GEMINI_2_5_PRO: 'gemini-2.5-pro-exp-03-25',
 } as const;
-
-export const MODELS = [
-  ...Object.values(OPEN_AI_MODELS),
-  ...Object.values(GEMINI_MODELS),
-] as const;
 
 export const LANGUAGES = {
   PYTHON: 'Python',
