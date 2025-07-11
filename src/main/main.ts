@@ -15,6 +15,12 @@ import { initializeIpcHandlers } from './ipcHandlers';
 import { initializeStateManager } from './stateManager';
 import { isDebug } from './constant';
 
+// Fix for black screen during screen sharing
+// Disable hardware acceleration features that can interfere with screen capture
+app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,UseSkiaRenderer');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();

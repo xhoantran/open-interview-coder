@@ -7,6 +7,48 @@ import { SolutionSection } from './components/SolutionSection';
 function Solutions() {
   const { problemInfo, solutionData } = useSyncedStore();
 
+  // Handle MCQ questions
+  if (problemInfo?.type === 'mcq' && problemInfo.mcq_data) {
+    return (
+      <div className="relative w-full space-y-3 px-4 py-3 overflow-hidden">
+        <SolutionCommands />
+        <div className="w-full h-full text-sm text-black bg-black/50 rounded-lg">
+          <div className="flex px-4 py-3 space-y-4 max-w-full">
+            <div className="w-full space-y-6">
+              <ContentSection
+                title="Question"
+                content={problemInfo.mcq_data.question}
+                isLoading={!problemInfo}
+              />
+              
+              <ContentSection
+                title="Options"
+                content={
+                  <div className="space-y-2">
+                    <div>A. {problemInfo.mcq_data.options.A}</div>
+                    <div>B. {problemInfo.mcq_data.options.B}</div>
+                    <div>C. {problemInfo.mcq_data.options.C}</div>
+                    <div>D. {problemInfo.mcq_data.options.D}</div>
+                  </div>
+                }
+                isLoading={!problemInfo}
+              />
+              
+              <ContentSection
+                title={`Correct Answer: ${problemInfo.mcq_data.correct_answer}`}
+                content={problemInfo.mcq_data.explanation}
+                isLoading={!problemInfo}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle coding problems (existing logic)
+  const codingData = problemInfo?.type === 'coding' ? problemInfo.coding_data : null;
+
   return (
     <div className="relative w-full space-y-3 px-4 py-3 overflow-hidden">
       {/* Navbar of commands with the SolutionsHelper */}
@@ -18,7 +60,7 @@ function Solutions() {
           <div className="w-full max-w-1/2 space-y-8">
             <ContentSection
               title="Problem Statement"
-              content={problemInfo?.problem_statement}
+              content={codingData?.problem_statement}
               isLoading={!problemInfo}
             />
 

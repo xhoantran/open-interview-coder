@@ -8,14 +8,14 @@ import {
   ToolConfig,
 } from '@google/generative-ai';
 import { GeminiModel } from '../../types/models';
-import { ProblemSchema, SolutionSchema } from '../../types/ProblemInfo';
+import { ProblemSchema, SolutionSchema, UnifiedProblemSchema } from '../../types/ProblemInfo';
 import stateManager from '../stateManager';
 
 export async function extractProblemInfo(
   modelName: GeminiModel, // Use a Gemini model name
   imageDataList: string[],
   // signal: AbortSignal, // AbortSignal not directly supported by generateContent
-): Promise<ProblemSchema> {
+): Promise<UnifiedProblemSchema> {
   const { geminiApiKey } = stateManager.getState(); // Get Gemini key
   if (!geminiApiKey) {
     throw new Error('Gemini API key not set');
@@ -37,7 +37,16 @@ export async function extractProblemInfo(
   // 2. Prepare the text part (prompt)
   const textPart: Part = {
     text:
-      'Extract the following information from this coding problem image:\n' +
+      'Analyze this image and determine if it contains a Multiple Choice Question (MCQ) or a Coding Problem.\n\n' +
+      'MCQ Format: Question on the left side of the screen with 4 options (A, B, C, D) on the right side.\n' +
+      'Coding Problem Format: Programming challenge with problem statement, input/output format, constraints, and examples.\n\n' +
+      'If it is an MCQ:\n' +
+      '- Extract the question text\n' +
+      '- Extract all 4 options (A, B, C, D)\n' +
+      '- Determine the correct answer based on your knowledge\n' +
+      '- Provide explanation for the correct answer\n\n' +
+      'If it is a Coding Problem:\n' +
+      '- Extract the following information:\n' +
       '1. ENTIRE Problem statement (what needs to be solved)\n' +
       '2. Input/Output format\n' +
       '3. Constraints on the input\n' +
@@ -58,148 +67,70 @@ export async function extractProblemInfo(
         {
           name: 'extract_problem_details',
           description:
-            'Extract and structure the key components of a coding problem',
+            'Extract and structure the key components of a problem - either MCQ or coding problem',
           parameters: {
-            type: SchemaType.OBJECT, // Use Enum for type safety
+            type: SchemaType.OBJECT,
             properties: {
-              problem_statement: {
+              type: {
                 type: SchemaType.STRING,
-                description:
-                  'The ENTIRE main problem statement describing what needs to be solved',
+                format: 'enum',
+                enum: ['mcq', 'coding'],
+                description: 'Type of problem: MCQ or coding',
               },
-              input_format: {
+              mcq_data: {
                 type: SchemaType.OBJECT,
                 properties: {
-                  description: {
+                  question: {
                     type: SchemaType.STRING,
-                    description: 'Description of the input format',
+                    description: 'The MCQ question text',
                   },
-                  parameters: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                      type: SchemaType.OBJECT,
-                      properties: {
-                        name: {
-                          type: SchemaType.STRING,
-                          description: 'Name of the parameter',
-                        },
-                        type: {
-                          type: SchemaType.STRING,
-                          format: 'enum',
-                          enum: [
-                            'number',
-                            'string',
-                            'array',
-                            'array2d',
-                            'array3d',
-                            'matrix',
-                            'tree',
-                            'graph',
-                          ],
-                          description: 'Type of the parameter',
-                        },
-                        subtype: {
-                          type: SchemaType.STRING,
-                          format: 'enum',
-                          enum: [
-                            'integer',
-                            'float',
-                            'string',
-                            'char',
-                            'boolean',
-                          ],
-                          description:
-                            'For arrays, specifies the type of elements',
-                        },
-                      },
-                      required: ['name', 'type'],
+                  options: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      A: { type: SchemaType.STRING, description: 'Option A' },
+                      B: { type: SchemaType.STRING, description: 'Option B' },
+                      C: { type: SchemaType.STRING, description: 'Option C' },
+                      D: { type: SchemaType.STRING, description: 'Option D' },
                     },
+                    required: ['A', 'B', 'C', 'D'],
+                  },
+                  correct_answer: {
+                    type: SchemaType.STRING,
+                    format: 'enum',
+                    enum: ['A', 'B', 'C', 'D'],
+                    description: 'The correct answer option',
+                  },
+                  explanation: {
+                    type: SchemaType.STRING,
+                    description: 'Explanation for why this is the correct answer',
                   },
                 },
-                required: ['description', 'parameters'],
+                required: ['question', 'options', 'correct_answer', 'explanation'],
               },
-              output_format: {
+              coding_data: {
                 type: SchemaType.OBJECT,
                 properties: {
-                  description: {
+                  problem_statement: {
                     type: SchemaType.STRING,
-                    description: 'Description of the expected output format',
+                    description:
+                      'The ENTIRE main problem statement describing what needs to be solved',
                   },
-                  type: {
-                    type: SchemaType.STRING,
-                    format: 'enum',
-                    enum: [
-                      'number',
-                      'string',
-                      'array',
-                      'array2d',
-                      'array3d',
-                      'matrix',
-                      'boolean',
-                    ],
-                    description: 'Type of the output',
-                  },
-                  subtype: {
-                    type: SchemaType.STRING,
-                    format: 'enum',
-                    enum: ['integer', 'float', 'string', 'char', 'boolean'],
-                    description: 'For arrays, specifies the type of elements',
-                  },
-                },
-                required: ['description', 'type'],
-              },
-              constraints: {
-                type: SchemaType.ARRAY,
-                items: {
-                  type: SchemaType.OBJECT,
-                  properties: {
-                    description: {
-                      type: SchemaType.STRING,
-                      description: 'Description of the constraint',
-                    },
-                    parameter: {
-                      type: SchemaType.STRING,
-                      description: 'The parameter this constraint applies to',
-                    },
-                    range: {
-                      type: SchemaType.OBJECT,
-                      properties: {
-                        min: { type: SchemaType.NUMBER },
-                        max: { type: SchemaType.NUMBER },
+                  input_format: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      description: {
+                        type: SchemaType.STRING,
+                        description: 'Description of the input format',
                       },
-                    },
-                  },
-                  required: ['description'],
-                },
-              },
-              test_cases: {
-                type: SchemaType.ARRAY,
-                minItems: 1,
-                items: {
-                  type: SchemaType.OBJECT,
-                  properties: {
-                    input: {
-                      type: SchemaType.OBJECT,
-                      properties: {
-                        args: {
-                          type: SchemaType.ARRAY,
-                          items: {
-                            type: SchemaType.STRING,
-                            description:
-                              'Arguments of the function call in order',
-                          },
-                          description:
-                            'Array of arguments of mixed types (number, string, array, object, boolean, null)',
-                        },
-                      },
-                      required: ['args'],
-                    },
-                    output: {
-                      type: SchemaType.OBJECT,
-                      properties: {
-                        result: {
+                      parameters: {
+                        type: SchemaType.ARRAY,
+                        items: {
                           type: SchemaType.OBJECT,
                           properties: {
+                            name: {
+                              type: SchemaType.STRING,
+                              description: 'Name of the parameter',
+                            },
                             type: {
                               type: SchemaType.STRING,
                               format: 'enum',
@@ -210,31 +141,151 @@ export async function extractProblemInfo(
                                 'array2d',
                                 'array3d',
                                 'matrix',
-                                'boolean',
+                                'tree',
+                                'graph',
                               ],
-                              description:
-                                'Type of the expected result (number, string, array, object, boolean)',
+                              description: 'Type of the parameter',
                             },
                             subtype: {
                               type: SchemaType.STRING,
                               format: 'enum',
-                              enum: ['integer', 'float', 'string', 'char'],
+                              enum: [
+                                'integer',
+                                'float',
+                                'string',
+                                'char',
+                                'boolean',
+                              ],
                               description:
                                 'For arrays, specifies the type of elements',
                             },
                           },
-                          description:
-                            'Expected result of mixed types (number, string, array, object, boolean, null)',
+                          required: ['name', 'type'],
                         },
                       },
-                      required: ['result'],
+                    },
+                    required: ['description', 'parameters'],
+                  },
+                  output_format: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      description: {
+                        type: SchemaType.STRING,
+                        description: 'Description of the expected output format',
+                      },
+                      type: {
+                        type: SchemaType.STRING,
+                        format: 'enum',
+                        enum: [
+                          'number',
+                          'string',
+                          'array',
+                          'array2d',
+                          'array3d',
+                          'matrix',
+                          'boolean',
+                        ],
+                        description: 'Type of the output',
+                      },
+                      subtype: {
+                        type: SchemaType.STRING,
+                        format: 'enum',
+                        enum: ['integer', 'float', 'string', 'char', 'boolean'],
+                        description: 'For arrays, specifies the type of elements',
+                      },
+                    },
+                    required: ['description', 'type'],
+                  },
+                  constraints: {
+                    type: SchemaType.ARRAY,
+                    items: {
+                      type: SchemaType.OBJECT,
+                      properties: {
+                        description: {
+                          type: SchemaType.STRING,
+                          description: 'Description of the constraint',
+                        },
+                        parameter: {
+                          type: SchemaType.STRING,
+                          description: 'The parameter this constraint applies to',
+                        },
+                        range: {
+                          type: SchemaType.OBJECT,
+                          properties: {
+                            min: { type: SchemaType.NUMBER },
+                            max: { type: SchemaType.NUMBER },
+                          },
+                        },
+                      },
+                      required: ['description'],
                     },
                   },
-                  required: ['input', 'output'],
+                  test_cases: {
+                    type: SchemaType.ARRAY,
+                    minItems: 1,
+                    items: {
+                      type: SchemaType.OBJECT,
+                      properties: {
+                        input: {
+                          type: SchemaType.OBJECT,
+                          properties: {
+                            args: {
+                              type: SchemaType.ARRAY,
+                              items: {
+                                type: SchemaType.STRING,
+                                description:
+                                  'Arguments of the function call in order',
+                              },
+                              description:
+                                'Array of arguments of mixed types (number, string, array, object, boolean, null)',
+                            },
+                          },
+                          required: ['args'],
+                        },
+                        output: {
+                          type: SchemaType.OBJECT,
+                          properties: {
+                            result: {
+                              type: SchemaType.OBJECT,
+                              properties: {
+                                type: {
+                                  type: SchemaType.STRING,
+                                  format: 'enum',
+                                  enum: [
+                                    'number',
+                                    'string',
+                                    'array',
+                                    'array2d',
+                                    'array3d',
+                                    'matrix',
+                                    'boolean',
+                                  ],
+                                  description:
+                                    'Type of the expected result (number, string, array, object, boolean)',
+                                },
+                                subtype: {
+                                  type: SchemaType.STRING,
+                                  format: 'enum',
+                                  enum: ['integer', 'float', 'string', 'char'],
+                                  description:
+                                    'For arrays, specifies the type of elements',
+                                },
+                              },
+                              description:
+                                'Expected result of mixed types (number, string, array, object, boolean, null)',
+                            },
+                          },
+                          required: ['result'],
+                        },
+                      },
+                      required: ['input', 'output'],
+                    },
+                  },
                 },
+                required: ['problem_statement'],
               },
             },
-            required: ['problem_statement'], // Keep required fields
+            required: ['type'],
           },
         },
       ],
@@ -279,7 +330,7 @@ export async function extractProblemInfo(
         // Gemini SDK often parses 'args' into an object directly
         // If it were a string (less common now), you'd use JSON.parse(args)
         // Validate the structure if necessary before casting
-        return args as ProblemSchema; // Assuming 'args' matches ProblemSchema
+        return args as UnifiedProblemSchema; // Assuming 'args' matches UnifiedProblemSchema
       }
       throw new Error(
         `Expected function call 'extract_problem_details' but got '${name}'`,
@@ -323,12 +374,19 @@ export async function extractProblemInfo(
 
 export async function generateSolutionResponses(
   modelName: GeminiModel,
-  problemInfo: ProblemSchema,
+  problemInfo: UnifiedProblemSchema,
 ): Promise<SolutionSchema> {
   const { geminiApiKey } = stateManager.getState(); // Get Gemini key
   if (!geminiApiKey) {
     throw new Error('Gemini API key not set');
   }
+
+  // Only generate solutions for coding problems
+  if (problemInfo.type !== 'coding' || !problemInfo.coding_data) {
+    throw new Error('Solution generation is only available for coding problems');
+  }
+
+  const codingData = problemInfo.coding_data;
 
   const genAI = new GoogleGenerativeAI(geminiApiKey);
   // Consider using a more powerful model like Pro for generation tasks if needed
@@ -343,28 +401,28 @@ export async function generateSolutionResponses(
   const promptContent = `Given the following coding problem:
 
 Problem Statement:
-${problemInfo.problem_statement}
+${codingData.problem_statement}
 
 Input Format:
-${problemInfo.input_format.description ?? 'Input format not available'}
+${codingData.input_format.description ?? 'Input format not available'}
 Parameters:
 ${
-  problemInfo.input_format.parameters
+  codingData.input_format.parameters
     ?.map((p) => `- ${p.name}: ${p.type}${p.subtype ? ` of ${p.subtype}` : ''}`)
     .join('\n') ?? 'No parameters available'
 }
 
 Output Format:
-${problemInfo.output_format.description ?? 'Output format not available'}
-Returns: ${problemInfo.output_format.type ?? 'Type not specified'}${
-    problemInfo.output_format?.subtype
-      ? ` of ${problemInfo.output_format.subtype}`
+${codingData.output_format.description ?? 'Output format not available'}
+Returns: ${codingData.output_format.type ?? 'Type not specified'}${
+    codingData.output_format?.subtype
+      ? ` of ${codingData.output_format.subtype}`
       : ''
   }
 
 Constraints:
 ${
-  problemInfo.constraints
+  codingData.constraints
     ?.map((c) => {
       let constraintStr = `- ${c.description}`;
       if (c.range) {
@@ -376,7 +434,7 @@ ${
 }
 
 Test Cases:
-${JSON.stringify(problemInfo.test_cases ?? 'No test cases available', null, 2)}
+${JSON.stringify(codingData.test_cases ?? 'No test cases available', null, 2)}
 
 Generate a solution strictly in this JSON format:
 {

@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { OpenAIModel } from '../../types/models';
-import { ProblemSchema, SolutionSchema } from '../../types/ProblemInfo';
+import { ProblemSchema, SolutionSchema, UnifiedProblemSchema } from '../../types/ProblemInfo';
 import stateManager from '../stateManager';
 
 const openAiAxios = axios.create({
@@ -27,7 +27,7 @@ export async function extractProblemInfo(
   model: OpenAIModel,
   imageDataList: string[],
   signal: AbortSignal,
-): Promise<ProblemSchema> {
+): Promise<UnifiedProblemSchema> {
   const { openAIApiKey } = stateManager.getState();
   if (!openAIApiKey) {
     throw new Error('OpenAI API key not set');
@@ -264,8 +264,12 @@ export async function extractProblemInfo(
     const functionCallArguments =
       response.data.choices[0].message.function_call.arguments;
 
-    // Return the parsed function call arguments
-    return JSON.parse(functionCallArguments);
+    // Parse the result and wrap it in UnifiedProblemSchema format
+    const codingData = JSON.parse(functionCallArguments);
+    return {
+      type: 'coding' as const,
+      coding_data: codingData,
+    };
   } catch (error) {
     if (error instanceof AxiosError) {
       if (error.response?.status === 401) {

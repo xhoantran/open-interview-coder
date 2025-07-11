@@ -64,6 +64,24 @@ export interface ProblemSchema {
   test_cases: TestCase[];
 }
 
+export interface MCQSchema {
+  question: string;
+  options: {
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
+  correct_answer: 'A' | 'B' | 'C' | 'D';
+  explanation: string;
+}
+
+export interface UnifiedProblemSchema {
+  type: 'mcq' | 'coding';
+  mcq_data?: MCQSchema;
+  coding_data?: ProblemSchema;
+}
+
 export interface SolutionSchema {
   code: string;
   thoughts: string[];

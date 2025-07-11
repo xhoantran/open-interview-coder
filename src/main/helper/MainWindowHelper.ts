@@ -78,6 +78,9 @@ export class MainWindowHelper {
           ? path.join(__dirname, 'preload.js')
           : path.join(__dirname, '../../.erb/dll/preload.js'),
         scrollBounce: true,
+        // Disable hardware acceleration to fix screen sharing black screen
+        webSecurity: true,
+        backgroundThrottling: false,
       },
       show: true,
       frame: false,
@@ -120,19 +123,22 @@ export class MainWindowHelper {
       return { action: 'deny' };
     });
 
-    // Enhanced screen capture resistance
-    this.mainWindow.setContentProtection(true);
+    // Note: Commented out screen capture resistance features to fix black screen during screen sharing
+    // If you need these features, they may interfere with screen sharing functionality
+    
+    // Enhanced screen capture resistance - DISABLED for screen sharing compatibility
+    // this.mainWindow.setContentProtection(true);
     this.mainWindow.setVisibleOnAllWorkspaces(true, {
       visibleOnFullScreen: true,
     });
     this.mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
     this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
-    // Additional screen capture resistance settings
+    // Additional screen capture resistance settings - MODIFIED for screen sharing compatibility
     if (process.platform === 'darwin') {
-      // Prevent window from being captured in screenshots
+      // Prevent window from being captured in screenshots - DISABLED
       this.mainWindow.setWindowButtonVisibility(false);
-      this.mainWindow.setHiddenInMissionControl(true);
+      // this.mainWindow.setHiddenInMissionControl(true); // DISABLED - causes issues with screen sharing
       this.mainWindow.setBackgroundColor('#00000000');
 
       // Prevent window from being included in window switcher
@@ -142,9 +148,9 @@ export class MainWindowHelper {
       this.mainWindow.setHasShadow(false);
     }
 
-    // Prevent the window from being captured by screen recording
+    // Prevent the window from being captured by screen recording - MODIFIED
     this.mainWindow.webContents.setBackgroundThrottling(false);
-    this.mainWindow.webContents.setFrameRate(60);
+    // this.mainWindow.webContents.setFrameRate(60); // This can cause issues with screen sharing
 
     stateManager.subscribe((state) => {
       if (this.mainWindow) {

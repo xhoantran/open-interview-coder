@@ -1,5 +1,5 @@
 import { isGeminiModel, isOpenAIModel } from '../../types/models';
-import { ProblemSchema } from '../../types/ProblemInfo';
+import { ProblemSchema, UnifiedProblemSchema } from '../../types/ProblemInfo';
 import stateManager from '../stateManager';
 import * as OpenAIHandler from './OpenAIHandler';
 import * as GeminiHandler from './GeminiHandler';
@@ -24,15 +24,20 @@ export const extractProblemInfo = async (
 };
 
 export const generateSolutionResponses = async (
-  problemInfo: ProblemSchema,
+  problemInfo: UnifiedProblemSchema,
   signal: AbortSignal,
 ) => {
   const { solutionModel } = stateManager.getState();
 
+  // Only generate solutions for coding problems
+  if (problemInfo.type !== 'coding' || !problemInfo.coding_data) {
+    throw new Error('Solution generation is only available for coding problems');
+  }
+
   if (isOpenAIModel(solutionModel))
     return OpenAIHandler.generateSolutionResponses(
       solutionModel,
-      problemInfo,
+      problemInfo.coding_data,
       signal,
     );
 

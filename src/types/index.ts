@@ -1,6 +1,6 @@
 import { LANGUAGES, VIEW, SHORTCUTS } from '../constant';
 import { ModelType } from './models';
-import { ProblemSchema, SolutionSchema } from './ProblemInfo';
+import { ProblemSchema, SolutionSchema, UnifiedProblemSchema } from './ProblemInfo';
 
 export type ViewType = (typeof VIEW)[keyof typeof VIEW];
 
@@ -15,7 +15,7 @@ export interface Screenshot {
 export interface AppState {
   // Functional state
   view: ViewType;
-  problemInfo: ProblemSchema | null;
+  problemInfo: UnifiedProblemSchema | null;
   solutionData: SolutionSchema | null;
   screenshotQueue: Screenshot[];
   extraScreenshotQueue: Screenshot[];

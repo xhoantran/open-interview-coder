@@ -13,7 +13,7 @@ export const GEMINI_MODELS = {
   GEMINI_1_5_PRO: 'gemini-1.5-pro',
   GEMINI_2_0_FLASH: 'gemini-2.0-flash',
   GEMINI_2_0_FLASH_LITE: 'gemini-2.0-flash-lite',
-  GEMINI_2_5_PRO: 'gemini-2.5-pro-exp-03-25',
+  GEMINI_2_5_PRO: 'gemini-2.5-pro',
 } as const;
 
 export const RECOMMENDED_EXTRACTION_MODEL = [
